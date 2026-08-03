@@ -1,0 +1,1077 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 5 – Kubernetes Fundamentals
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* Why Kubernetes is required
+* Kubernetes architecture
+* Control Plane components
+* Worker Node components
+* Kubernetes objects
+* Pods
+* ReplicaSets
+* Deployments
+* Services
+* Namespaces
+* Labels and Selectors
+* Kubernetes YAML files
+* kubectl commands
+* Kubernetes cluster workflow
+
+Kubernetes is the foundation of Amazon EKS. EKS is a managed Kubernetes service, so understanding Kubernetes is mandatory.
+
+---
+
+# 1. Why Kubernetes?
+
+Docker solves the problem:
+
+> "How do I package and run my application?"
+
+But production environments require more.
+
+Imagine a company running hundreds of containers:
+
+```text
+Application
+
+├── Frontend Containers
+├── Backend Containers
+├── Database Containers
+├── Cache Containers
+└── Worker Containers
+```
+
+Problems:
+
+* Who starts containers?
+* What if a container crashes?
+* How do we scale?
+* How do containers communicate?
+* How do we update without downtime?
+* How do we manage thousands of containers?
+
+Kubernetes solves these problems.
+
+---
+
+# 2. What is Kubernetes?
+
+Kubernetes is an open-source container orchestration platform.
+
+It automates:
+
+* Deployment
+* Scaling
+* Networking
+* Load balancing
+* Storage management
+* Self-healing
+* Rolling updates
+
+Architecture:
+
+```text
+Users
+
+  |
+
+kubectl
+
+  |
+
+Kubernetes Cluster
+
+  |
+
+Containers
+```
+
+---
+
+# 3. Kubernetes vs Docker
+
+Docker:
+
+```text
+Build Container
+
+Run Container
+```
+
+Kubernetes:
+
+```text
+Manage Thousands of Containers
+
+├── Start Containers
+├── Restart Failed Containers
+├── Scale Applications
+├── Update Applications
+└── Manage Networking
+```
+
+---
+
+# 4. Kubernetes Cluster Architecture
+
+A Kubernetes cluster contains:
+
+1. Control Plane
+2. Worker Nodes
+
+```text
+                 Kubernetes Cluster
+
+
+              Control Plane
+
+        API Server
+        Scheduler
+        Controller Manager
+        etcd
+
+
+                 |
+                 |
+
+       -----------------------
+
+          Worker Node 1
+
+          kubelet
+          kube-proxy
+          container runtime
+          Pods
+
+
+       -----------------------
+
+          Worker Node 2
+
+          kubelet
+          kube-proxy
+          container runtime
+          Pods
+
+```
+
+---
+
+# 5. Control Plane
+
+The control plane manages the Kubernetes cluster.
+
+Responsibilities:
+
+* Accept commands
+* Schedule workloads
+* Monitor cluster state
+* Maintain desired state
+
+---
+
+# 6. API Server
+
+The API Server is the entry point of Kubernetes.
+
+Every operation goes through it.
+
+Example:
+
+```bash
+kubectl create deployment nginx
+```
+
+Flow:
+
+```text
+kubectl
+
+↓
+
+API Server
+
+↓
+
+Kubernetes Cluster
+```
+
+---
+
+# 7. etcd
+
+etcd is Kubernetes' database.
+
+Stores:
+
+* Cluster information
+* Configuration
+* Secrets
+* Node information
+* Deployment details
+
+Example:
+
+```text
+etcd
+
+|
+├── Nodes
+├── Pods
+├── Services
+└── Configurations
+```
+
+---
+
+# 8. Scheduler
+
+The scheduler decides where Pods run.
+
+Example:
+
+A new Pod arrives:
+
+```text
+New Pod
+
+↓
+
+Scheduler
+
+↓
+
+Worker Node 2
+```
+
+Scheduling considers:
+
+* CPU availability
+* Memory
+* Constraints
+* Labels
+* Taints
+
+---
+
+# 9. Controller Manager
+
+Controllers maintain the desired state.
+
+Example:
+
+Desired:
+
+```text
+Application should have 3 Pods
+```
+
+Current:
+
+```text
+Only 2 Pods running
+```
+
+Controller:
+
+```text
+Creates another Pod
+```
+
+---
+
+# 10. Cloud Controller Manager
+
+Used in cloud environments.
+
+Handles cloud-specific resources:
+
+* Load Balancers
+* Storage volumes
+* Node management
+
+In EKS:
+
+```text
+Kubernetes
+
+↓
+
+AWS Cloud Controller
+
+↓
+
+AWS Resources
+```
+
+---
+
+# 11. Worker Node
+
+Worker nodes run applications.
+
+Components:
+
+```text
+Worker Node
+
+├── kubelet
+├── kube-proxy
+├── Container Runtime
+└── Pods
+```
+
+---
+
+# 12. kubelet
+
+kubelet runs on every worker node.
+
+Responsibilities:
+
+* Communicates with API Server
+* Creates Pods
+* Reports node health
+
+Flow:
+
+```text
+API Server
+
+↓
+
+kubelet
+
+↓
+
+Container Runtime
+
+↓
+
+Container
+```
+
+---
+
+# 13. kube-proxy
+
+Handles networking.
+
+Responsibilities:
+
+* Service communication
+* Network rules
+* Traffic routing
+
+Example:
+
+```text
+Frontend Pod
+
+↓
+
+Service
+
+↓
+
+Backend Pod
+```
+
+---
+
+# 14. Container Runtime
+
+Responsible for running containers.
+
+Examples:
+
+* containerd
+* CRI-O
+
+Modern Kubernetes commonly uses containerd.
+
+---
+
+# 15. Kubernetes Objects
+
+Kubernetes manages resources using objects.
+
+Examples:
+
+* Pod
+* Deployment
+* Service
+* ConfigMap
+* Secret
+* Volume
+* Namespace
+
+Objects describe the desired state.
+
+---
+
+# 16. Desired State vs Actual State
+
+Kubernetes continuously compares:
+
+```text
+Desired State
+
+        vs
+
+Actual State
+```
+
+Example:
+
+Desired:
+
+```text
+5 replicas
+```
+
+Actual:
+
+```text
+4 replicas
+```
+
+Kubernetes creates one more.
+
+---
+
+# 17. Pods
+
+A Pod is the smallest Kubernetes unit.
+
+A Pod contains one or more containers.
+
+Example:
+
+```text
+Pod
+
+|
+├── Application Container
+|
+└── Sidecar Container
+```
+
+---
+
+Example:
+
+```yaml
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: nginx-pod
+
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+```
+
+---
+
+Create:
+
+```bash
+kubectl apply -f pod.yaml
+```
+
+---
+
+Check:
+
+```bash
+kubectl get pods
+```
+
+---
+
+# 18. Pod Lifecycle
+
+States:
+
+```text
+Pending
+
+↓
+
+Running
+
+↓
+
+Succeeded / Failed
+```
+
+---
+
+# 19. ReplicaSet
+
+ReplicaSet maintains Pod count.
+
+Example:
+
+Desired:
+
+```text
+3 nginx Pods
+```
+
+If one fails:
+
+```text
+2 Pods
+
+↓
+
+ReplicaSet creates another
+
+↓
+
+3 Pods
+```
+
+---
+
+# 20. Deployment
+
+Deployment manages ReplicaSets.
+
+Provides:
+
+* Scaling
+* Updates
+* Rollbacks
+
+Architecture:
+
+```text
+Deployment
+
+↓
+
+ReplicaSet
+
+↓
+
+Pods
+```
+
+---
+
+Example:
+
+```yaml
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+  name: nginx
+
+spec:
+
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: nginx
+
+  template:
+
+    metadata:
+      labels:
+        app: nginx
+
+    spec:
+
+      containers:
+      - name: nginx
+        image: nginx
+```
+
+---
+
+Create:
+
+```bash
+kubectl apply -f deployment.yaml
+```
+
+---
+
+View:
+
+```bash
+kubectl get deployments
+```
+
+---
+
+# 21. Scaling Applications
+
+Manual scaling:
+
+```bash
+kubectl scale deployment nginx --replicas=5
+```
+
+Result:
+
+```text
+Before:
+
+3 Pods
+
+
+After:
+
+5 Pods
+```
+
+---
+
+# 22. Rolling Updates
+
+Kubernetes updates applications without downtime.
+
+Example:
+
+Old version:
+
+```text
+v1
+
+Pod
+Pod
+Pod
+```
+
+Update:
+
+```text
+v1 + v2
+```
+
+Final:
+
+```text
+v2
+
+Pod
+Pod
+Pod
+```
+
+---
+
+# 23. Rollback
+
+If a deployment fails:
+
+```bash
+kubectl rollout undo deployment nginx
+```
+
+Returns to previous version.
+
+---
+
+# 24. Services
+
+Pods have temporary IP addresses.
+
+Example:
+
+```text
+Pod
+
+10.0.1.5
+
+Restart
+
+10.0.1.9
+```
+
+Service provides a stable network endpoint.
+
+---
+
+# 25. Service Types
+
+## ClusterIP
+
+Default service.
+
+Internal communication.
+
+```text
+Frontend
+
+↓
+
+ClusterIP
+
+↓
+
+Backend
+```
+
+---
+
+## NodePort
+
+Exposes application through node IP.
+
+Example:
+
+```text
+NodeIP:30080
+```
+
+---
+
+## LoadBalancer
+
+Creates external cloud load balancer.
+
+In AWS:
+
+```text
+Service
+
+↓
+
+AWS Load Balancer
+
+↓
+
+Pods
+```
+
+---
+
+# 26. Namespaces
+
+Namespaces divide cluster resources.
+
+Example:
+
+```text
+Cluster
+
+├── Development
+
+├── Testing
+
+└── Production
+```
+
+Create:
+
+```bash
+kubectl create namespace dev
+```
+
+---
+
+View:
+
+```bash
+kubectl get namespaces
+```
+
+---
+
+# 27. Labels
+
+Labels identify resources.
+
+Example:
+
+```yaml
+labels:
+
+ app: frontend
+
+ environment: production
+```
+
+---
+
+Used for:
+
+* Selecting Pods
+* Grouping resources
+* Service routing
+
+---
+
+# 28. Selectors
+
+Selectors find objects using labels.
+
+Example:
+
+Service:
+
+```yaml
+selector:
+
+ app: frontend
+```
+
+Finds:
+
+```text
+Pods with:
+
+app=frontend
+```
+
+---
+
+# 29. Kubernetes YAML Structure
+
+Most Kubernetes YAML files contain:
+
+```yaml
+apiVersion:
+
+kind:
+
+metadata:
+
+spec:
+```
+
+Example:
+
+```yaml
+apiVersion: v1
+
+kind: Pod
+
+metadata:
+  name: app
+
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+```
+
+---
+
+# 30. kubectl
+
+kubectl is the Kubernetes command-line tool.
+
+It communicates with API Server.
+
+---
+
+Check cluster:
+
+```bash
+kubectl cluster-info
+```
+
+---
+
+Get nodes:
+
+```bash
+kubectl get nodes
+```
+
+---
+
+Get pods:
+
+```bash
+kubectl get pods
+```
+
+---
+
+Detailed information:
+
+```bash
+kubectl describe pod pod-name
+```
+
+---
+
+View logs:
+
+```bash
+kubectl logs pod-name
+```
+
+---
+
+Execute command:
+
+```bash
+kubectl exec -it pod-name -- bash
+```
+
+---
+
+Delete resource:
+
+```bash
+kubectl delete pod pod-name
+```
+
+---
+
+# 31. Kubernetes Application Flow
+
+Complete flow:
+
+```text
+Developer
+
+↓
+
+Docker Image
+
+↓
+
+Container Registry
+
+↓
+
+Kubernetes Deployment
+
+↓
+
+Pod
+
+↓
+
+Service
+
+↓
+
+User Traffic
+```
+
+---
+
+# 32. Kubernetes in AWS EKS
+
+Traditional Kubernetes:
+
+```text
+You manage:
+
+Control Plane
+
++
+
+Worker Nodes
+```
+
+EKS:
+
+```text
+AWS manages:
+
+Control Plane
+
+
+You manage:
+
+Worker Nodes
+
+Applications
+```
+
+Architecture:
+
+```text
+AWS EKS
+
+        Control Plane
+              |
+              |
+        Worker Nodes
+              |
+              |
+             Pods
+```
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ Kubernetes purpose
+✅ Cluster architecture
+✅ Control Plane
+✅ Worker Nodes
+✅ API Server
+✅ etcd
+✅ Scheduler
+✅ Controllers
+✅ kubelet
+✅ kube-proxy
+✅ Pods
+✅ ReplicaSets
+✅ Deployments
+✅ Services
+✅ Namespaces
+✅ Labels
+✅ kubectl basics
+
+---
+
+# Hands-on Lab
+
+1. Install Minikube or Kind.
+2. Create a Kubernetes cluster.
+3. Deploy nginx.
+4. Create a Service.
+5. Scale deployment.
+6. Perform rolling update.
+7. Roll back deployment.
+8. View logs.
+9. Enter inside a container.
+
+---
+
+# Next Chapter
+
+## Chapter 6 – Kubernetes Advanced Concepts
+
+Topics:
+
+* ConfigMaps
+* Secrets
+* Volumes
+* Persistent Volumes (PV)
+* Persistent Volume Claims (PVC)
+* StatefulSets
+* DaemonSets
+* Jobs
+* CronJobs
+* Ingress
+* Network Policies
+* Resource Requests & Limits
+* Probes
+* Taints and Tolerations
+
+These concepts are heavily used in real EKS production environments.
