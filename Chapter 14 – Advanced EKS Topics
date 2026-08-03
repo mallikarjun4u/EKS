@@ -1,0 +1,879 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 14 – Advanced EKS Topics
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* EKS Auto Mode
+* Karpenter node provisioning
+* Bottlerocket OS
+* AWS Fargate on EKS
+* Spot Instances
+* Managed Node Groups
+* Kubernetes scheduling
+* Taints and tolerations
+* Node affinity
+* Pod affinity and anti-affinity
+* Cluster upgrades
+* Kubernetes version lifecycle
+* Advanced production patterns
+
+This chapter covers advanced features used by experienced EKS engineers in production environments.
+
+---
+
+# 1. EKS Advanced Architecture
+
+A basic EKS cluster:
+
+```text id="p9g3kf"
+EKS Control Plane
+
+        |
+
+Worker Nodes
+
+        |
+
+Pods
+```
+
+Advanced production cluster:
+
+```text id="8n2m2x"
+                 EKS Cluster
+
+
+       --------------------------------
+
+       Managed Nodes
+
+       Karpenter Nodes
+
+       Fargate Pods
+
+       Spot Instances
+
+       GPU Nodes
+
+       Specialized Workloads
+
+       --------------------------------
+```
+
+---
+
+# 2. Amazon EKS Auto Mode
+
+EKS Auto Mode simplifies Kubernetes infrastructure management.
+
+AWS automatically manages:
+
+* Compute
+* Networking
+* Storage
+* Scaling
+* Load balancing
+
+Traditional EKS:
+
+```text id="v2z8i8"
+You manage:
+
+EC2 Nodes
+
+Node Groups
+
+Scaling
+
+Updates
+
+Drivers
+```
+
+---
+
+EKS Auto Mode:
+
+```text id="s0z3xa"
+AWS manages:
+
+Nodes
+
+Scaling
+
+Storage
+
+Networking
+```
+
+---
+
+# 3. EKS Auto Mode Architecture
+
+```text id="6d7z5f"
+Application
+
+    |
+
+Kubernetes API
+
+    |
+
+EKS Auto Mode
+
+    |
+
+AWS Infrastructure
+
+    |
+
+Compute + Storage + Networking
+```
+
+---
+
+# 4. Benefits of EKS Auto Mode
+
+Advantages:
+
+✅ Less infrastructure management
+✅ Automatic scaling
+✅ Simplified operations
+✅ Better AWS integration
+✅ Reduced maintenance effort
+
+---
+
+# 5. When to Use EKS Auto Mode
+
+Good for:
+
+* Teams new to Kubernetes
+* Fast application deployment
+* Standard workloads
+* Reduced operational overhead
+
+---
+
+Not ideal for:
+
+* Highly customized infrastructure
+* Special networking requirements
+* Custom node configurations
+
+---
+
+# 6. Karpenter Introduction
+
+Karpenter is a Kubernetes node provisioning tool.
+
+It automatically creates EC2 nodes based on Pod requirements.
+
+Traditional scaling:
+
+```text id="9md6jc"
+Pod Pending
+
+↓
+
+Cluster Autoscaler
+
+↓
+
+Increase Node Group Size
+
+↓
+
+New Node
+```
+
+---
+
+Karpenter:
+
+```text id="f5kq3r"
+Pod Pending
+
+↓
+
+Karpenter
+
+↓
+
+Select Best EC2 Instance
+
+↓
+
+Create Node
+```
+
+---
+
+# 7. Karpenter Architecture
+
+```text id="8b8m4w"
+              Kubernetes Scheduler
+
+                       |
+
+                  Pending Pods
+
+                       |
+
+                    Karpenter
+
+                       |
+
+              EC2 Instance Selection
+
+                       |
+
+                  New Worker Node
+```
+
+---
+
+# 8. Karpenter Benefits
+
+Advantages:
+
+* Faster scaling
+* Better instance selection
+* Lower cost
+* Automatic node lifecycle management
+
+---
+
+Example:
+
+Application requires:
+
+```text id="6f4q5n"
+CPU: 16 cores
+
+Memory: 64GB
+```
+
+Karpenter selects:
+
+```text id="j7t6u4"
+Suitable EC2 Instance
+```
+
+---
+
+# 9. Karpenter NodePool Concept
+
+NodePool defines:
+
+* Instance types
+* Capacity type
+* Architecture
+* Limits
+
+Example:
+
+```yaml id="m8z5cw"
+apiVersion: karpenter.sh/v1
+
+kind: NodePool
+
+spec:
+
+ requirements:
+
+ - key: kubernetes.io/arch
+
+   operator: In
+
+   values:
+
+   - amd64
+```
+
+---
+
+# 10. Karpenter vs Cluster Autoscaler
+
+| Feature            | Karpenter | Cluster Autoscaler |
+| ------------------ | --------- | ------------------ |
+| Scaling            | Pod based | Node group based   |
+| Speed              | Faster    | Slower             |
+| Instance selection | Dynamic   | Fixed              |
+| Cost optimization  | Better    | Limited            |
+| AWS integration    | Strong    | Standard           |
+
+---
+
+# 11. Bottlerocket OS
+
+Bottlerocket is a Linux-based operating system built by AWS for containers.
+
+Designed for:
+
+* Kubernetes
+* Security
+* Minimal maintenance
+
+---
+
+Traditional node:
+
+```text id="1u1m2x"
+Linux OS
+
++
+
+Packages
+
++
+
+Tools
+
++
+
+Containers
+```
+
+---
+
+Bottlerocket:
+
+```text id="5r7k8y"
+Minimal OS
+
++
+
+Container Runtime
+
++
+
+Kubernetes
+```
+
+---
+
+# 12. Bottlerocket Benefits
+
+Advantages:
+
+✅ Smaller attack surface
+✅ Automatic updates
+✅ Container-focused
+✅ Improved security
+
+---
+
+# 13. Bottlerocket Architecture
+
+```text id="y9l8m0"
+EC2 Instance
+
+     |
+
+Bottlerocket OS
+
+     |
+
+Container Runtime
+
+     |
+
+Kubernetes Pods
+```
+
+---
+
+# 14. AWS Fargate for EKS
+
+Fargate runs containers without managing EC2 nodes.
+
+Traditional:
+
+```text id="8o1v2z"
+Pod
+
+↓
+
+EC2 Worker Node
+
+↓
+
+You manage servers
+```
+
+---
+
+Fargate:
+
+```text id="z0c7q9"
+Pod
+
+↓
+
+AWS Fargate
+
+↓
+
+AWS manages infrastructure
+```
+
+---
+
+# 15. Fargate Architecture
+
+```text id="5zq2np"
+Kubernetes Pod
+
+        |
+
+Fargate Profile
+
+        |
+
+AWS Managed Compute
+```
+
+---
+
+# 16. Fargate Benefits
+
+Advantages:
+
+* No node management
+* Automatic scaling
+* Strong isolation
+
+---
+
+Good for:
+
+* Small applications
+* APIs
+* Batch jobs
+* Serverless workloads
+
+---
+
+# 17. Fargate Limitations
+
+Not ideal for:
+
+* DaemonSets
+* GPU workloads
+* High-performance computing
+* Custom node requirements
+
+---
+
+# 18. Spot Instances in EKS
+
+Spot Instances use unused AWS capacity at lower cost.
+
+Example:
+
+On-Demand:
+
+```text id="m4w0qz"
+$100/month
+```
+
+Spot:
+
+```text id="e4p2z9"
+$30/month
+```
+
+---
+
+# 19. Spot Instance Architecture
+
+Recommended:
+
+```text id="9h8m4x"
+Production Workloads
+
+        |
+
+On-Demand Nodes
+
+
+Batch Workloads
+
+        |
+
+Spot Nodes
+```
+
+---
+
+# 20. Spot Instance Best Practices
+
+Use for:
+
+* Stateless applications
+* Batch processing
+* CI/CD runners
+
+Avoid for:
+
+* Critical databases
+* Single-instance workloads
+
+---
+
+# 21. Kubernetes Scheduling
+
+Kubernetes scheduler decides:
+
+"Which node should run this Pod?"
+
+Flow:
+
+```text id="u3q8k1"
+Pod Created
+
+      |
+
+Scheduler
+
+      |
+
+Node Selection
+
+      |
+
+Pod Running
+```
+
+---
+
+# 22. Node Labels
+
+Labels describe nodes.
+
+Example:
+
+```text id="6n0s4k"
+Node 1
+
+label:
+
+gpu=true
+
+
+Node 2
+
+label:
+
+gpu=false
+```
+
+---
+
+# 23. Node Selector
+
+Simple scheduling rule.
+
+Example:
+
+Run Pod only on GPU nodes:
+
+```yaml id="n6p1qm"
+nodeSelector:
+
+ gpu: "true"
+```
+
+---
+
+# 24. Node Affinity
+
+Advanced node selection.
+
+Example:
+
+Prefer:
+
+```text id="x9j3dk"
+Run application on:
+
+High-memory nodes
+```
+
+---
+
+Example:
+
+```yaml id="d8f3zc"
+affinity:
+
+ nodeAffinity:
+
+  requiredDuringSchedulingIgnoredDuringExecution:
+```
+
+---
+
+# 25. Pod Affinity
+
+Places Pods together.
+
+Example:
+
+Frontend and cache:
+
+```text id="a7n8kp"
+Node 1
+
+Frontend
+
+Redis
+```
+
+Useful when:
+
+* Low latency is required
+
+---
+
+# 26. Pod Anti-Affinity
+
+Separates Pods.
+
+Example:
+
+```text id="r4m8yx"
+Node A
+
+Application Pod
+
+
+Node B
+
+Application Pod
+```
+
+Benefits:
+
+* High availability
+* Failure protection
+
+---
+
+# 27. Taints and Tolerations
+
+Used to control which Pods run on nodes.
+
+Example:
+
+GPU node:
+
+```text id="q5m8zs"
+Node
+
+Taint:
+
+GPU=true
+```
+
+Only Pods with tolerance can run.
+
+---
+
+Pod:
+
+```yaml id="8h6t8x"
+tolerations:
+
+- key: GPU
+
+  effect: NoSchedule
+```
+
+---
+
+# 28. Kubernetes Cluster Upgrades
+
+Kubernetes versions are released regularly.
+
+Upgrade components:
+
+1. Control plane
+2. Worker nodes
+3. Add-ons
+
+---
+
+# 29. Upgrade Process
+
+Production approach:
+
+```text id="d5x7q0"
+Backup
+
+↓
+
+Test Upgrade
+
+↓
+
+Upgrade Control Plane
+
+↓
+
+Upgrade Nodes
+
+↓
+
+Validate Applications
+```
+
+---
+
+# 30. EKS Add-on Management
+
+Common add-ons:
+
+* VPC CNI
+* CoreDNS
+* kube-proxy
+* EBS CSI Driver
+
+Check:
+
+```bash id="6k0x3h"
+kubectl get pods -n kube-system
+```
+
+---
+
+# 31. Advanced Production Pattern
+
+Large enterprise cluster:
+
+```text id="x5k8m2"
+                  EKS Cluster
+
+
+ ------------------------------------------------
+
+
+ General Node Group
+
+        |
+
+ Normal Applications
+
+
+ ------------------------------------------------
+
+
+ GPU Node Group
+
+        |
+
+ AI/ML Workloads
+
+
+ ------------------------------------------------
+
+
+ Spot Node Group
+
+        |
+
+ Batch Jobs
+
+
+ ------------------------------------------------
+
+
+ Fargate
+
+        |
+
+ Serverless Pods
+
+
+ ------------------------------------------------
+```
+
+---
+
+# 32. Choosing Compute Options
+
+| Workload                   | Recommended    |
+| -------------------------- | -------------- |
+| Normal applications        | Managed Nodes  |
+| Variable workloads         | Karpenter      |
+| Simple serverless apps     | Fargate        |
+| Batch jobs                 | Spot Instances |
+| ML workloads               | GPU Nodes      |
+| Security-focused workloads | Bottlerocket   |
+
+---
+
+# 33. Advanced EKS Best Practices
+
+✅ Use multiple node groups
+✅ Use Karpenter for dynamic workloads
+✅ Use Spot for cost savings
+✅ Use affinity rules
+✅ Spread workloads across AZs
+✅ Regularly upgrade clusters
+✅ Automate infrastructure
+✅ Monitor scaling events
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ EKS Auto Mode
+✅ Karpenter
+✅ Bottlerocket OS
+✅ AWS Fargate
+✅ Spot Instances
+✅ Advanced scheduling
+✅ Node affinity
+✅ Pod affinity
+✅ Taints and tolerations
+✅ Cluster upgrades
+✅ Advanced production patterns
+
+---
+
+# Hands-on Lab
+
+Practice:
+
+1. Create multiple node groups.
+2. Deploy workloads using node selectors.
+3. Configure affinity rules.
+4. Test Pod anti-affinity.
+5. Deploy Spot worker nodes.
+6. Install Karpenter.
+7. Configure automatic node provisioning.
+8. Upgrade an EKS cluster safely.
+
+---
+
+# Next Chapter
+
+# Chapter 15 – Real-World EKS Projects
+
+Topics:
+
+* Complete 3-tier application deployment
+* Microservices architecture
+* CI/CD implementation
+* GitOps with Argo CD
+* Monitoring stack
+* Security hardening
+* Production deployment workflow
+* End-to-end EKS project for portfolio and interviews
