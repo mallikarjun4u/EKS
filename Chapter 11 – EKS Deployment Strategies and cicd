@@ -1,0 +1,1100 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 11 – EKS Deployment Strategies and CI/CD
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* Kubernetes application deployment workflow
+* Deployment strategies
+* Rolling updates
+* Recreate strategy
+* Blue-Green deployments
+* Canary deployments
+* Helm package manager
+* Helm charts
+* GitOps methodology
+* Argo CD
+* CI/CD pipelines
+* Container image build pipelines
+* Production deployment workflow
+
+Modern EKS environments require automated deployment processes. Manual deployments do not scale for enterprise applications.
+
+---
+
+# 1. Application Deployment Lifecycle
+
+A typical production workflow:
+
+```text
+Developer
+
+   |
+
+Git Repository
+
+   |
+
+CI Pipeline
+
+   |
+
+Build Docker Image
+
+   |
+
+Security Scan
+
+   |
+
+Push Image to Registry
+
+   |
+
+Deploy to EKS
+
+   |
+
+Monitor Application
+```
+
+---
+
+# 2. Traditional Deployment Problems
+
+Manual deployment:
+
+```text
+Developer
+
+↓
+
+Build Image
+
+↓
+
+Copy Files
+
+↓
+
+SSH Server
+
+↓
+
+Restart Application
+```
+
+Problems:
+
+* Human errors
+* No rollback
+* Slow releases
+* Difficult scaling
+* No audit trail
+
+---
+
+# 3. CI/CD Overview
+
+CI/CD means:
+
+## Continuous Integration
+
+Automatically:
+
+* Build code
+* Test code
+* Create images
+
+---
+
+## Continuous Delivery / Deployment
+
+Automatically:
+
+* Deploy applications
+* Update environments
+* Release new versions
+
+---
+
+# 4. CI/CD Pipeline Architecture
+
+Example:
+
+```text
+                 Developer
+
+                    |
+
+                  Git Push
+
+                    |
+
+              CI/CD Pipeline
+
+                    |
+
+        -------------------------
+
+        Build Docker Image
+
+        Run Tests
+
+        Scan Image
+
+        Push Image
+
+        Deploy to EKS
+
+        -------------------------
+
+                    |
+
+                 Application
+```
+
+---
+
+# 5. Container Image Pipeline
+
+Example:
+
+```text
+Source Code
+
+↓
+
+Dockerfile
+
+↓
+
+Docker Build
+
+↓
+
+Docker Image
+
+↓
+
+Amazon ECR
+
+↓
+
+Kubernetes Deployment
+
+↓
+
+Pod
+```
+
+---
+
+# 6. Kubernetes Deployment Strategies
+
+Kubernetes supports different release strategies:
+
+* Recreate
+* Rolling Update
+* Blue-Green
+* Canary
+
+---
+
+# 7. Recreate Deployment Strategy
+
+Old application is stopped before new version starts.
+
+Example:
+
+Before:
+
+```text
+Version 1
+
+Pod
+Pod
+Pod
+```
+
+During update:
+
+```text
+No Pods
+```
+
+After:
+
+```text
+Version 2
+
+Pod
+Pod
+Pod
+```
+
+---
+
+## Advantages
+
+* Simple
+* Clean deployment
+
+## Disadvantages
+
+* Application downtime
+
+Not preferred for production.
+
+---
+
+# 8. Rolling Update Strategy
+
+Default Kubernetes strategy.
+
+Old Pods are gradually replaced.
+
+Example:
+
+Before:
+
+```text
+v1
+
+Pod
+Pod
+Pod
+```
+
+Update:
+
+```text
+v1
+
+Pod
+Pod
+
+
+v2
+
+Pod
+```
+
+Final:
+
+```text
+v2
+
+Pod
+Pod
+Pod
+```
+
+---
+
+# 9. Rolling Update Configuration
+
+Example:
+
+```yaml
+strategy:
+
+  type: RollingUpdate
+
+  rollingUpdate:
+
+    maxUnavailable: 1
+
+    maxSurge: 1
+```
+
+---
+
+Meaning:
+
+`maxUnavailable`
+
+Number of Pods allowed to be unavailable.
+
+---
+
+`maxSurge`
+
+Extra Pods allowed during update.
+
+---
+
+# 10. Rollback
+
+If deployment fails:
+
+```bash
+kubectl rollout undo deployment app
+```
+
+Check history:
+
+```bash
+kubectl rollout history deployment app
+```
+
+---
+
+# 11. Blue-Green Deployment
+
+Two environments:
+
+* Blue = Current version
+* Green = New version
+
+Architecture:
+
+```text
+                User Traffic
+
+                     |
+
+                 Service
+
+                /      \
+
+             Blue      Green
+
+             v1         v2
+```
+
+---
+
+Process:
+
+1. Deploy Green version.
+2. Test Green.
+3. Switch traffic.
+4. Remove Blue.
+
+---
+
+## Advantages
+
+* Zero downtime
+* Easy rollback
+
+## Disadvantages
+
+* Requires double resources
+
+---
+
+# 12. Canary Deployment
+
+Release new version to a small percentage of users.
+
+Example:
+
+```text
+Users
+
+100%
+
+ |
+
+Service
+
+ |
+
+----------------
+
+90%
+
+v1 Pods
+
+
+10%
+
+v2 Pods
+```
+
+---
+
+Process:
+
+1. Deploy new version.
+2. Send small traffic.
+3. Monitor.
+4. Increase traffic.
+5. Complete migration.
+
+---
+
+# 13. Canary Benefits
+
+Advantages:
+
+* Reduced risk
+* Real user testing
+* Fast rollback
+
+Used by:
+
+* Large-scale applications
+* Financial systems
+* Critical services
+
+---
+
+# 14. Helm Introduction
+
+Helm is a Kubernetes package manager.
+
+Think:
+
+```text
+Linux:
+
+apt install nginx
+
+
+Kubernetes:
+
+helm install nginx
+```
+
+---
+
+Helm packages Kubernetes resources:
+
+* Deployments
+* Services
+* ConfigMaps
+* Secrets
+* Ingress
+
+---
+
+# 15. Why Helm?
+
+Without Helm:
+
+```text
+Application
+
+├── deployment.yaml
+
+├── service.yaml
+
+├── configmap.yaml
+
+├── ingress.yaml
+```
+
+Many files to manage.
+
+---
+
+With Helm:
+
+```text
+Application
+
+↓
+
+Helm Chart
+
+↓
+
+Kubernetes Resources
+```
+
+---
+
+# 16. Helm Architecture
+
+```text
+Developer
+
+   |
+
+Helm Chart
+
+   |
+
+Helm Client
+
+   |
+
+Kubernetes API Server
+
+   |
+
+Resources
+```
+
+---
+
+# 17. Installing Helm
+
+Check:
+
+```bash
+helm version
+```
+
+---
+
+# 18. Helm Chart Structure
+
+Example:
+
+```text
+my-app/
+
+├── Chart.yaml
+
+├── values.yaml
+
+├── templates/
+
+│     ├── deployment.yaml
+
+│     ├── service.yaml
+
+│     └── ingress.yaml
+```
+
+---
+
+# 19. Chart.yaml
+
+Contains chart information.
+
+Example:
+
+```yaml
+apiVersion: v2
+
+name: my-app
+
+version: 1.0.0
+```
+
+---
+
+# 20. values.yaml
+
+Stores configuration values.
+
+Example:
+
+```yaml
+replicaCount: 3
+
+image:
+
+ repository: nginx
+
+ tag: latest
+```
+
+---
+
+# 21. Helm Commands
+
+Search charts:
+
+```bash
+helm search repo nginx
+```
+
+Install:
+
+```bash
+helm install myapp ./chart
+```
+
+List releases:
+
+```bash
+helm list
+```
+
+Upgrade:
+
+```bash
+helm upgrade myapp ./chart
+```
+
+Rollback:
+
+```bash
+helm rollback myapp 1
+```
+
+Delete:
+
+```bash
+helm uninstall myapp
+```
+
+---
+
+# 22. Helm in EKS
+
+Production flow:
+
+```text
+Developer
+
+↓
+
+Helm Chart
+
+↓
+
+CI/CD Pipeline
+
+↓
+
+EKS Cluster
+
+↓
+
+Pods
+```
+
+---
+
+# 23. GitOps Concept
+
+GitOps means:
+
+"Git is the source of truth for infrastructure."
+
+Architecture:
+
+```text
+Git Repository
+
+       |
+
+       |
+
+GitOps Tool
+
+       |
+
+       |
+
+Kubernetes Cluster
+```
+
+---
+
+Benefits:
+
+* Version control
+* Audit history
+* Automated deployments
+* Easy rollback
+
+---
+
+# 24. Argo CD
+
+Argo CD is a GitOps deployment tool for Kubernetes.
+
+It continuously compares:
+
+```text
+Git State
+
+      VS
+
+Cluster State
+```
+
+---
+
+If different:
+
+```text
+Git
+
+↓
+
+Argo CD
+
+↓
+
+Kubernetes Cluster
+```
+
+---
+
+# 25. Argo CD Architecture
+
+```text
+             Git Repository
+
+                   |
+
+                   |
+
+                Argo CD
+
+                   |
+
+                   |
+
+            Kubernetes Cluster
+
+
+                   |
+
+                  Pods
+```
+
+---
+
+# 26. Argo CD Workflow
+
+Developer changes:
+
+```text
+deployment.yaml
+```
+
+Push:
+
+```bash
+git push
+```
+
+Argo CD detects change:
+
+```text
+Git Version
+
+       |
+
+       |
+
+Kubernetes Updated
+```
+
+---
+
+# 27. Jenkins CI/CD with EKS
+
+Common pipeline:
+
+```text
+Developer
+
+↓
+
+GitHub
+
+↓
+
+Jenkins
+
+↓
+
+Docker Build
+
+↓
+
+Image Scan
+
+↓
+
+Push to ECR
+
+↓
+
+Deploy Helm Chart
+
+↓
+
+EKS
+```
+
+---
+
+# 28. GitHub Actions with EKS
+
+Workflow:
+
+```text
+Code Push
+
+↓
+
+GitHub Actions
+
+↓
+
+Build Image
+
+↓
+
+Push ECR
+
+↓
+
+kubectl/Helm Deploy
+
+↓
+
+EKS
+```
+
+---
+
+# 29. AWS Native CI/CD
+
+AWS services:
+
+* CodeCommit
+* CodeBuild
+* CodeDeploy
+* CodePipeline
+* ECR
+* EKS
+
+Architecture:
+
+```text
+Code Repository
+
+↓
+
+CodeBuild
+
+↓
+
+ECR
+
+↓
+
+CodePipeline
+
+↓
+
+EKS
+```
+
+---
+
+# 30. Production CI/CD Pipeline Example
+
+Complete flow:
+
+```text
+Developer
+
+    |
+
+    v
+
+Git Repository
+
+    |
+
+    v
+
+CI Pipeline
+
+    |
+
+    +----------------+
+
+    | Build Image    |
+
+    | Test Code      |
+
+    | Scan Image     |
+
+    +----------------+
+
+            |
+
+            v
+
+        Amazon ECR
+
+            |
+
+            v
+
+       Helm Deployment
+
+            |
+
+            v
+
+          EKS
+
+            |
+
+            v
+
+        Kubernetes Pods
+```
+
+---
+
+# 31. Deployment Monitoring
+
+After deployment check:
+
+Pods:
+
+```bash
+kubectl get pods
+```
+
+Logs:
+
+```bash
+kubectl logs pod-name
+```
+
+Deployment status:
+
+```bash
+kubectl rollout status deployment app
+```
+
+Events:
+
+```bash
+kubectl get events
+```
+
+---
+
+# 32. Deployment Best Practices
+
+✅ Use Git-based deployments
+✅ Use Helm for packaging
+✅ Scan images before deployment
+✅ Automate testing
+✅ Use rolling updates
+✅ Implement rollback strategy
+✅ Use separate environments
+
+Example:
+
+```text
+Development
+
+↓
+
+Testing
+
+↓
+
+Staging
+
+↓
+
+Production
+```
+
+---
+
+# 33. EKS Enterprise Deployment Architecture
+
+```text
+                 Developers
+
+                     |
+
+                Git Repository
+
+                     |
+
+                 CI Pipeline
+
+                     |
+
+              Container Registry
+
+                     |
+
+                 Helm Charts
+
+                     |
+
+                 Argo CD
+
+                     |
+
+                    EKS
+
+                     |
+
+              Kubernetes Applications
+```
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ CI/CD concepts
+✅ Deployment lifecycle
+✅ Rolling updates
+✅ Blue-Green deployment
+✅ Canary deployment
+✅ Helm
+✅ Helm charts
+✅ GitOps
+✅ Argo CD
+✅ Jenkins pipeline
+✅ GitHub Actions
+✅ AWS CI/CD tools
+✅ Production deployment workflow
+
+---
+
+# Hands-on Lab
+
+Practice:
+
+1. Create Docker image.
+2. Push image to Amazon ECR.
+3. Create Helm chart.
+4. Deploy application using Helm.
+5. Configure rolling update.
+6. Perform rollback.
+7. Install Argo CD.
+8. Connect Git repository.
+9. Automate EKS deployment.
+
+---
+
+# Next Chapter
+
+# Chapter 12 – EKS Monitoring, Logging, and Troubleshooting
+
+Topics:
+
+* Kubernetes monitoring architecture
+* CloudWatch integration
+* Prometheus
+* Grafana
+* Container Insights
+* Logging architecture
+* Fluent Bit
+* Application logs
+* Metrics
+* Alerts
+* Common EKS failures
+* Production troubleshooting commands
+
+This chapter covers operating and maintaining EKS clusters in real production environments.
