@@ -1,0 +1,1096 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 13 – EKS Production Architecture and Best Practices
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* Enterprise EKS architecture
+* Production cluster design
+* AWS account strategy
+* Multi-cluster architecture
+* High availability design
+* Disaster recovery
+* Backup strategies
+* Cost optimization
+* Performance tuning
+* Production readiness checklist
+
+This chapter combines Kubernetes, AWS networking, security, storage, monitoring, and deployment knowledge into a real production design.
+
+---
+
+# 1. Development vs Production EKS
+
+A learning environment:
+
+```text
+Developer Laptop
+
+      |
+
+ Single EKS Cluster
+
+      |
+
+ Few Applications
+```
+
+Production environment:
+
+```text
+Users
+
+ |
+
+DNS
+
+ |
+
+Load Balancer
+
+ |
+
+Multiple EKS Clusters
+
+ |
+
+Applications
+
+ |
+
+Databases
+
+ |
+
+Monitoring
+
+ |
+
+Security Controls
+```
+
+Production requires:
+
+* High availability
+* Security
+* Reliability
+* Scalability
+* Monitoring
+* Disaster recovery
+
+---
+
+# 2. Enterprise EKS Architecture
+
+Typical enterprise architecture:
+
+```text
+                         Users
+
+                           |
+
+                       Route 53
+
+                           |
+
+                 Application Load Balancer
+
+                           |
+
+                      Ingress Controller
+
+                           |
+
+                    Kubernetes Services
+
+                           |
+
+        --------------------------------------
+
+        EKS Worker Nodes
+
+        |
+
+        Pods
+
+        |
+
+        Applications
+
+        --------------------------------------
+
+                           |
+
+                 AWS Managed Services
+
+             RDS | S3 | DynamoDB | SQS
+```
+
+---
+
+# 3. AWS Account Strategy
+
+Large organizations avoid putting everything in one AWS account.
+
+Recommended structure:
+
+```text
+AWS Organization
+
+        |
+
+--------------------------------
+
+Management Account
+
+        |
+
+Security Account
+
+        |
+
+Logging Account
+
+        |
+
+Development Account
+
+        |
+
+Testing Account
+
+        |
+
+Production Account
+
+--------------------------------
+```
+
+---
+
+# 4. Why Multiple AWS Accounts?
+
+Benefits:
+
+## Security Isolation
+
+Example:
+
+```text
+Development
+
+Cannot access
+
+Production
+```
+
+---
+
+## Cost Tracking
+
+Separate billing:
+
+```text
+Development Cost
+
+Production Cost
+```
+
+---
+
+## Compliance
+
+Different security policies.
+
+---
+
+# 5. Production EKS Cluster Design
+
+Recommended:
+
+* Private worker nodes
+* Multiple Availability Zones
+* Managed Node Groups
+* Auto Scaling
+* Encryption enabled
+* Logging enabled
+
+Architecture:
+
+```text
+                 AWS Region
+
+
+        AZ-A              AZ-B              AZ-C
+
+
+     Private          Private           Private
+     Subnet           Subnet            Subnet
+
+
+     Node             Node              Node
+
+
+      Pods             Pods              Pods
+```
+
+---
+
+# 6. High Availability Design
+
+High availability means:
+
+"The system continues working even when something fails."
+
+---
+
+## Multiple Availability Zones
+
+Bad:
+
+```text
+Single AZ
+
+Node failure
+
+Application Down
+```
+
+---
+
+Good:
+
+```text
+AZ-A
+
+Node
+
+
+AZ-B
+
+Node
+
+
+AZ-C
+
+Node
+```
+
+---
+
+# 7. Control Plane Availability
+
+Amazon manages the EKS control plane.
+
+AWS provides:
+
+* Multiple API servers
+* Multiple etcd instances
+* Automatic maintenance
+
+You manage:
+
+* Worker nodes
+* Applications
+* Networking
+* Security
+
+---
+
+# 8. Worker Node Design
+
+Production nodes should use:
+
+* Multiple node groups
+* Different instance sizes
+* Auto Scaling
+
+Example:
+
+```text
+EKS Cluster
+
+
+Node Group 1
+
+General Applications
+
+
+Node Group 2
+
+High CPU Workloads
+
+
+Node Group 3
+
+Memory Workloads
+```
+
+---
+
+# 9. Managed Node Groups
+
+AWS manages:
+
+* EC2 instances
+* Updates
+* Scaling
+* Lifecycle
+
+Architecture:
+
+```text
+EKS
+
+ |
+
+Managed Node Group
+
+ |
+
+EC2 Instances
+
+ |
+
+Pods
+```
+
+---
+
+# 10. Cluster Separation Strategy
+
+Companies usually choose:
+
+## Option 1: One Cluster Multiple Namespaces
+
+Example:
+
+```text
+Production Cluster
+
+
+Namespace:
+
+frontend
+
+backend
+
+payments
+
+analytics
+```
+
+---
+
+## Option 2: Multiple Clusters
+
+Example:
+
+```text
+Production Cluster
+
+Testing Cluster
+
+Development Cluster
+```
+
+---
+
+# 11. Multi-Cluster Architecture
+
+Example:
+
+```text
+AWS Region
+
+
+Production EKS
+
+        |
+
+Applications
+
+
+----------------
+
+
+Development EKS
+
+        |
+
+Testing Applications
+```
+
+---
+
+Benefits:
+
+* Isolation
+* Security
+* Independent upgrades
+* Better reliability
+
+---
+
+# 12. Disaster Recovery (DR)
+
+Disaster recovery prepares for:
+
+* Region failure
+* Data loss
+* Infrastructure failure
+
+---
+
+DR strategies:
+
+## Backup and Restore
+
+Example:
+
+```text
+Primary Cluster
+
+        |
+
+Backup
+
+        |
+
+Restore
+
+        |
+
+New Cluster
+```
+
+---
+
+## Multi-Region
+
+Example:
+
+```text
+Region A
+
+Primary EKS
+
+
+        Replication
+
+
+Region B
+
+Backup EKS
+```
+
+---
+
+# 13. Kubernetes Backup
+
+Backup items:
+
+* Deployments
+* Services
+* ConfigMaps
+* Secrets
+* Persistent Volumes
+
+Tools:
+
+* Velero
+* AWS Backup
+
+---
+
+Backup flow:
+
+```text
+EKS Cluster
+
+      |
+
+Velero
+
+      |
+
+Amazon S3
+
+      |
+
+Backup Storage
+```
+
+---
+
+# 14. Application Backup Strategy
+
+Example:
+
+Database:
+
+```text
+Application
+
+ |
+
+RDS Database
+
+ |
+
+Automated Snapshots
+```
+
+---
+
+Files:
+
+```text
+Application
+
+ |
+
+S3
+
+ |
+
+Versioning Enabled
+```
+
+---
+
+# 15. Production Security Architecture
+
+Security layers:
+
+```text
+Internet
+
+ |
+
+WAF
+
+ |
+
+Load Balancer
+
+ |
+
+Security Groups
+
+ |
+
+Network Policies
+
+ |
+
+Pods
+
+ |
+
+Applications
+```
+
+---
+
+# 16. Identity and Access Management
+
+Best practices:
+
+Avoid:
+
+```text
+Everyone
+
+↓
+
+Administrator Access
+```
+
+---
+
+Use:
+
+```text
+Developer
+
+↓
+
+Limited IAM Role
+
+↓
+
+Specific Kubernetes Permissions
+```
+
+---
+
+# 17. Secrets Management
+
+Production approach:
+
+Avoid:
+
+```text
+Password inside YAML
+```
+
+Use:
+
+```text
+Application
+
+↓
+
+Secrets Manager
+
+↓
+
+Pod
+```
+
+---
+
+# 18. Production Networking
+
+Recommended:
+
+```text
+Internet
+
+ |
+
+Public Subnet
+
+ |
+
+Load Balancer
+
+ |
+
+Private Subnet
+
+ |
+
+Worker Nodes
+
+ |
+
+Pods
+```
+
+---
+
+# 19. Cost Optimization
+
+EKS costs include:
+
+* Control plane
+* EC2 nodes
+* Load balancers
+* Storage
+* Data transfer
+
+---
+
+# 20. Right-Sizing Resources
+
+Bad:
+
+```yaml
+resources:
+
+ requests:
+
+   cpu: 8
+
+   memory: 32Gi
+```
+
+Application uses:
+
+```text
+CPU: 1
+
+Memory: 2Gi
+```
+
+Waste:
+
+```text
+Unused capacity
+```
+
+---
+
+Better:
+
+```yaml
+resources:
+
+ requests:
+
+   cpu: 1
+
+   memory: 2Gi
+```
+
+---
+
+# 21. Use Cluster Autoscaler
+
+Automatically adjusts nodes.
+
+Example:
+
+```text
+More Pods
+
+↓
+
+Need More Nodes
+
+↓
+
+Autoscaler Adds EC2
+```
+
+---
+
+# 22. Use Karpenter
+
+Karpenter automatically provisions nodes based on workload requirements.
+
+Example:
+
+```text
+Pod Requires:
+
+8 CPU
+
+32GB Memory
+
+
+Karpenter:
+
+Creates Suitable Instance
+```
+
+Benefits:
+
+* Faster scaling
+* Better cost efficiency
+
+---
+
+# 23. Use Spot Instances
+
+Spot instances reduce EC2 cost.
+
+Good for:
+
+* Batch jobs
+* Testing
+* Stateless workloads
+
+Example:
+
+```text
+Production Nodes
+
+On-Demand
+
+
+Batch Nodes
+
+Spot Instances
+```
+
+---
+
+# 24. Monitoring Requirements
+
+Production must monitor:
+
+## Cluster
+
+* Node health
+* API server
+* Control plane logs
+
+## Applications
+
+* Errors
+* Latency
+* Traffic
+
+## Infrastructure
+
+* CPU
+* Memory
+* Disk
+* Network
+
+---
+
+# 25. Logging Architecture
+
+Production:
+
+```text
+Applications
+
+ |
+
+Fluent Bit
+
+ |
+
+CloudWatch / OpenSearch
+
+ |
+
+Dashboard
+```
+
+---
+
+# 26. Performance Optimization
+
+Improve performance using:
+
+* Proper resource requests
+* Horizontal scaling
+* Node optimization
+* Image optimization
+* Efficient networking
+
+---
+
+# 27. Container Image Best Practices
+
+Use:
+
+* Small images
+* Multi-stage builds
+* Security scanning
+* Version tags
+
+Avoid:
+
+```text
+latest
+```
+
+Prefer:
+
+```text
+app:v1.2.5
+```
+
+---
+
+# 28. Production Deployment Flow
+
+Example:
+
+```text
+Developer
+
+ |
+
+Git Push
+
+ |
+
+CI Pipeline
+
+ |
+
+Docker Build
+
+ |
+
+Security Scan
+
+ |
+
+ECR
+
+ |
+
+Helm
+
+ |
+
+Argo CD
+
+ |
+
+EKS Production
+```
+
+---
+
+# 29. Production Readiness Checklist
+
+## Cluster
+
+✅ Multiple AZs
+✅ Private nodes
+✅ Logging enabled
+✅ Encryption enabled
+
+---
+
+## Security
+
+✅ IAM least privilege
+✅ RBAC configured
+✅ Secrets protected
+✅ Network policies enabled
+
+---
+
+## Application
+
+✅ Resource limits
+✅ Health checks
+✅ Auto scaling
+✅ Rolling deployments
+
+---
+
+## Operations
+
+✅ Monitoring
+✅ Alerts
+✅ Backup
+✅ Disaster recovery plan
+
+---
+
+# 30. Real Production EKS Architecture
+
+Complete design:
+
+```text
+                         Users
+
+                           |
+
+                       Route 53
+
+                           |
+
+                         WAF
+
+                           |
+
+                    Load Balancer
+
+                           |
+
+                        Ingress
+
+                           |
+
+                    Kubernetes Services
+
+                           |
+
+        -----------------------------------
+
+        EKS Cluster
+
+        |
+
+        Node Groups
+
+        |
+
+        Applications
+
+
+        -----------------------------------
+
+             Monitoring
+
+             Prometheus
+
+             Grafana
+
+             CloudWatch
+
+
+             Security
+
+             IAM
+
+             RBAC
+
+             Network Policies
+
+
+             Backup
+
+             S3
+
+             Velero
+```
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ Enterprise EKS architecture
+✅ AWS account strategy
+✅ Multi-cluster design
+✅ High availability
+✅ Disaster recovery
+✅ Backup planning
+✅ Security architecture
+✅ Cost optimization
+✅ Performance tuning
+✅ Production checklist
+
+---
+
+# Hands-on Project
+
+Build a production-style EKS environment:
+
+1. Create VPC with private subnets.
+2. Create EKS cluster.
+3. Deploy managed node groups.
+4. Install AWS Load Balancer Controller.
+5. Configure monitoring.
+6. Configure logging.
+7. Deploy application using Helm.
+8. Configure autoscaling.
+9. Configure backups.
+10. Perform disaster recovery test.
+
+---
+
+# Next Chapter
+
+# Chapter 14 – Advanced EKS Topics
+
+Topics:
+
+* EKS Auto Mode
+* Karpenter
+* Bottlerocket OS
+* AWS Fargate
+* Spot Instances
+* Advanced scheduling
+* Cluster upgrades
+* Kubernetes version management
+* Taints and tolerations
+* Affinity rules
+* Advanced production patterns
