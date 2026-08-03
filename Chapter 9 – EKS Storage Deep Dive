@@ -1,0 +1,1109 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 9 – EKS Storage Deep Dive
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* Kubernetes storage architecture
+* Why containers need persistent storage
+* Volumes in Kubernetes
+* Persistent Volumes (PV)
+* Persistent Volume Claims (PVC)
+* Storage Classes
+* Dynamic provisioning
+* AWS EBS CSI Driver
+* AWS EFS CSI Driver
+* Stateful applications on EKS
+* Database storage patterns
+* Backup and recovery strategies
+
+Storage is critical because containers are temporary, but application data must survive container restarts, Pod failures, and node replacements.
+
+---
+
+# 1. Why Kubernetes Storage?
+
+Containers are temporary.
+
+Example:
+
+```text
+Container
+
+↓
+
+Application Data
+
+↓
+
+Container Deleted
+
+↓
+
+Data Lost
+```
+
+Problems:
+
+* Pod restarts
+* Node failures
+* Application upgrades
+* Scaling events
+
+Solution:
+
+```text
+Container
+
+↓
+
+Persistent Storage
+
+↓
+
+Data Survives
+```
+
+---
+
+# 2. Storage Architecture in Kubernetes
+
+Kubernetes separates:
+
+1. Application
+2. Storage request
+3. Physical storage
+
+Architecture:
+
+```text
+Application Pod
+
+        |
+
+        |
+
+Persistent Volume Claim (PVC)
+
+        |
+
+        |
+
+Persistent Volume (PV)
+
+        |
+
+        |
+
+Cloud Storage
+
+(EBS / EFS)
+```
+
+---
+
+# 3. Kubernetes Storage Objects
+
+Main storage objects:
+
+| Object                        | Purpose                     |
+| ----------------------------- | --------------------------- |
+| Volume                        | Storage attached to Pod     |
+| Persistent Volume (PV)        | Actual storage resource     |
+| Persistent Volume Claim (PVC) | Request for storage         |
+| StorageClass                  | Creates storage dynamically |
+
+---
+
+# 4. Kubernetes Volume
+
+A Volume provides storage to containers.
+
+Example:
+
+```text
+Pod
+
+|
+
+Container
+
+|
+
+Volume
+```
+
+---
+
+Types:
+
+* emptyDir
+* hostPath
+* ConfigMap volume
+* Secret volume
+* Persistent Volume
+
+---
+
+# 5. emptyDir Volume
+
+Temporary storage.
+
+Created when Pod starts.
+
+Example:
+
+```yaml
+volumes:
+
+- name: temporary-storage
+
+  emptyDir: {}
+```
+
+Lifecycle:
+
+```text
+Pod Created
+
+↓
+
+Volume Created
+
+↓
+
+Pod Deleted
+
+↓
+
+Volume Deleted
+```
+
+---
+
+Use cases:
+
+* Cache
+* Temporary files
+* Sharing data between containers
+
+---
+
+# 6. hostPath Volume
+
+Mounts storage from the node.
+
+Example:
+
+```text
+Worker Node
+
+/home/data
+
+      |
+
+      |
+
+Pod
+```
+
+Used mainly for:
+
+* Testing
+* Node-level applications
+
+Not recommended for production workloads.
+
+---
+
+# 7. Persistent Volume (PV)
+
+A Persistent Volume represents actual storage.
+
+Example:
+
+```text
+AWS EBS Volume
+
+        |
+
+        |
+
+Persistent Volume
+
+        |
+
+        |
+
+Pod
+```
+
+A PV exists independently from Pods.
+
+---
+
+Example PV:
+
+```yaml
+apiVersion: v1
+
+kind: PersistentVolume
+
+metadata:
+
+  name: database-pv
+
+
+spec:
+
+  capacity:
+
+    storage: 20Gi
+```
+
+---
+
+# 8. Persistent Volume Claim (PVC)
+
+PVC is a storage request from an application.
+
+Example:
+
+Application says:
+
+"I need 20GB storage."
+
+PVC:
+
+```yaml
+apiVersion: v1
+
+kind: PersistentVolumeClaim
+
+metadata:
+
+  name: mysql-pvc
+
+
+spec:
+
+  resources:
+
+    requests:
+
+      storage: 20Gi
+```
+
+---
+
+Flow:
+
+```text
+Developer
+
+↓
+
+PVC Request
+
+↓
+
+PV Matching
+
+↓
+
+Storage Attached
+
+↓
+
+Pod Uses Storage
+```
+
+---
+
+# 9. PV Access Modes
+
+Access modes define how storage can be mounted.
+
+---
+
+## ReadWriteOnce (RWO)
+
+One node can mount storage.
+
+Example:
+
+```text
+Node 1
+
+ |
+
+ EBS Volume
+```
+
+Common for:
+
+* Databases
+* MySQL
+* PostgreSQL
+
+---
+
+## ReadOnlyMany (ROX)
+
+Multiple nodes can read.
+
+---
+
+## ReadWriteMany (RWX)
+
+Multiple nodes can read/write.
+
+Example:
+
+```text
+Pod 1
+
+ |
+
+ |
+
+EFS
+
+ |
+
+ |
+
+Pod 2
+```
+
+Common for:
+
+* Shared files
+* Content storage
+
+---
+
+# 10. StorageClass
+
+StorageClass creates storage automatically.
+
+Without StorageClass:
+
+```text
+Administrator
+
+↓
+
+Create PV manually
+```
+
+With StorageClass:
+
+```text
+Developer
+
+↓
+
+PVC
+
+↓
+
+StorageClass
+
+↓
+
+Automatically creates PV
+
+↓
+
+Cloud Storage
+```
+
+---
+
+Example:
+
+```yaml
+apiVersion: storage.k8s.io/v1
+
+kind: StorageClass
+
+metadata:
+
+ name: gp3
+
+
+provisioner:
+
+ ebs.csi.aws.com
+```
+
+---
+
+# 11. Dynamic Provisioning
+
+Dynamic provisioning automatically creates storage.
+
+Example:
+
+```text
+Application
+
+↓
+
+PVC
+
+↓
+
+StorageClass
+
+↓
+
+AWS EBS
+
+↓
+
+Volume Created Automatically
+```
+
+Benefits:
+
+* No manual storage creation
+* Faster deployments
+* Easier scaling
+
+---
+
+# 12. AWS Storage Options for EKS
+
+Main AWS storage services:
+
+## Amazon EBS
+
+Block storage
+
+## Amazon EFS
+
+Shared file storage
+
+---
+
+# 13. Amazon EBS Overview
+
+Amazon Elastic Block Store provides block storage.
+
+Architecture:
+
+```text
+EC2 Worker Node
+
+        |
+
+        |
+
+      EBS Volume
+
+        |
+
+        |
+
+       Pod
+```
+
+---
+
+Characteristics:
+
+* High performance
+* Low latency
+* Single node attachment
+
+---
+
+Best for:
+
+* Databases
+* Stateful applications
+* High-performance workloads
+
+---
+
+# 14. EBS CSI Driver
+
+Kubernetes communicates with EBS through CSI.
+
+CSI:
+
+**Container Storage Interface**
+
+Architecture:
+
+```text
+Kubernetes
+
+↓
+
+EBS CSI Driver
+
+↓
+
+Amazon EBS
+
+↓
+
+Volume
+```
+
+---
+
+Install check:
+
+```bash
+kubectl get pods -n kube-system
+```
+
+Look for:
+
+```text
+ebs-csi-controller
+```
+
+---
+
+# 15. EBS StorageClass Example
+
+```yaml
+apiVersion: storage.k8s.io/v1
+
+kind: StorageClass
+
+metadata:
+
+ name: gp3
+
+
+provisioner:
+
+ ebs.csi.aws.com
+
+
+parameters:
+
+ type: gp3
+```
+
+---
+
+# 16. EBS Limitations
+
+EBS:
+
+* Attached to one Availability Zone
+* Usually one node attachment
+* Not shared filesystem
+
+Example:
+
+```text
+AZ-A
+
+Node 1
+
+ |
+
+EBS Volume
+```
+
+Cannot easily attach to:
+
+```text
+AZ-B
+
+Node 2
+```
+
+---
+
+# 17. Amazon EFS Overview
+
+Amazon Elastic File System provides shared storage.
+
+Architecture:
+
+```text
+             EFS
+
+
+        /           \
+
+
+     Pod 1          Pod 2
+```
+
+---
+
+Characteristics:
+
+* Multi-node access
+* Shared filesystem
+* Automatic scaling
+
+---
+
+Best for:
+
+* Shared files
+* Web applications
+* Content management systems
+
+---
+
+# 18. EFS CSI Driver
+
+Architecture:
+
+```text
+Kubernetes
+
+↓
+
+EFS CSI Driver
+
+↓
+
+Amazon EFS
+
+↓
+
+Pods
+```
+
+---
+
+# 19. EBS vs EFS
+
+| Feature     | EBS           | EFS            |
+| ----------- | ------------- | -------------- |
+| Type        | Block Storage | File Storage   |
+| Access      | Single node   | Multiple nodes |
+| Performance | High          | Shared         |
+| Use Case    | Database      | Shared files   |
+| Multi-AZ    | No            | Yes            |
+
+---
+
+# 20. Stateful Applications in EKS
+
+Stateless:
+
+Example:
+
+```text
+Frontend
+
+API Server
+
+Web Server
+```
+
+Data stored elsewhere.
+
+---
+
+Stateful:
+
+Example:
+
+```text
+Database
+
+Message Queue
+
+Storage System
+```
+
+Need:
+
+* Stable identity
+* Persistent storage
+* Ordered deployment
+
+Use:
+
+* StatefulSet
+* Persistent Volumes
+
+---
+
+# 21. StatefulSet with Storage
+
+Architecture:
+
+```text
+StatefulSet
+
+      |
+
+      |
+
+Pod mysql-0
+
+      |
+
+      |
+
+PVC mysql-0
+
+      |
+
+      |
+
+EBS Volume
+```
+
+If Pod restarts:
+
+```text
+Old Pod
+
+mysql-0
+
+
+New Pod
+
+mysql-0
+
+
+Same Storage
+```
+
+---
+
+# 22. Database Deployment Pattern
+
+Recommended production approach:
+
+Instead of:
+
+```text
+Database inside Kubernetes
+```
+
+Often:
+
+```text
+Application Pods
+
+        |
+
+        |
+
+Amazon RDS Database
+```
+
+AWS managed databases:
+
+* Automated backups
+* Maintenance
+* High availability
+
+---
+
+Use Kubernetes databases when:
+
+* Need portability
+* Require custom database setup
+* Have Kubernetes expertise
+
+---
+
+# 23. Volume Snapshots
+
+Snapshots create backups of volumes.
+
+Example:
+
+```text
+EBS Volume
+
+↓
+
+Snapshot
+
+↓
+
+Backup Storage
+```
+
+Used for:
+
+* Disaster recovery
+* Data restoration
+
+---
+
+# 24. Backup Strategy
+
+Production backup layers:
+
+## Application Backup
+
+Example:
+
+Database dumps.
+
+---
+
+## Storage Backup
+
+Example:
+
+EBS snapshots.
+
+---
+
+## Cluster Backup
+
+Example:
+
+Kubernetes object backup.
+
+---
+
+# 25. Velero Backup Tool
+
+Velero backs up Kubernetes resources.
+
+Can backup:
+
+* Deployments
+* Services
+* Configurations
+* Persistent Volumes
+
+Architecture:
+
+```text
+EKS Cluster
+
+↓
+
+Velero
+
+↓
+
+Amazon S3
+
+↓
+
+Backup
+```
+
+---
+
+# 26. Storage Security
+
+Best practices:
+
+* Encrypt volumes
+* Use IAM permissions
+* Restrict access
+* Backup regularly
+* Avoid storing secrets in volumes
+* Monitor storage usage
+
+---
+
+# 27. Encryption
+
+AWS storage supports encryption.
+
+Example:
+
+```text
+Pod
+
+↓
+
+Encrypted EBS Volume
+
+↓
+
+AWS KMS Key
+```
+
+---
+
+# 28. Storage Troubleshooting
+
+## Check PVC status
+
+```bash
+kubectl get pvc
+```
+
+Example:
+
+```text
+NAME
+
+mysql-pvc
+
+STATUS
+
+Bound
+```
+
+---
+
+## Check PV
+
+```bash
+kubectl get pv
+```
+
+---
+
+## Describe PVC
+
+```bash
+kubectl describe pvc mysql-pvc
+```
+
+---
+
+## Check StorageClass
+
+```bash
+kubectl get storageclass
+```
+
+---
+
+# 29. Common Storage Problems
+
+## PVC stuck in Pending
+
+Possible causes:
+
+* No StorageClass
+* Wrong access mode
+* CSI driver missing
+
+---
+
+## Pod cannot mount volume
+
+Check:
+
+```bash
+kubectl describe pod pod-name
+```
+
+---
+
+## EBS attachment failure
+
+Check:
+
+* Availability Zone
+* Node capacity
+* IAM permissions
+
+---
+
+# 30. Production EKS Storage Architecture
+
+Example:
+
+```text
+                 Users
+
+                    |
+
+              Application Pods
+
+                    |
+
+        -------------------------
+
+        |                       |
+
+     EBS Volume              EFS
+
+     Database                Shared Files
+
+
+        |
+
+        |
+
+      Snapshots
+
+        |
+
+        |
+
+       Backup
+```
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ Kubernetes storage model
+✅ Volumes
+✅ PV
+✅ PVC
+✅ StorageClass
+✅ Dynamic provisioning
+✅ AWS EBS
+✅ EBS CSI Driver
+✅ AWS EFS
+✅ EFS CSI Driver
+✅ Stateful applications
+✅ Database storage patterns
+✅ Backup strategies
+✅ Storage troubleshooting
+
+---
+
+# Hands-on Lab
+
+Practice:
+
+1. Create EKS cluster.
+2. Install EBS CSI Driver.
+3. Create StorageClass.
+4. Create PVC.
+5. Deploy MySQL using PVC.
+6. Verify persistent data.
+7. Install EFS CSI Driver.
+8. Mount EFS to multiple Pods.
+9. Test backup and restore.
+
+---
+
+# Next Chapter
+
+# Chapter 10 – EKS Security Deep Dive
+
+Topics:
+
+* Kubernetes security model
+* AWS IAM integration
+* IAM Roles for Service Accounts (IRSA)
+* RBAC
+* Users and Groups
+* Service Accounts
+* Secrets management
+* Pod Security Standards
+* Network security
+* Container image security
+* EKS security best practices
+
+This chapter covers how enterprises secure production EKS clusters.
