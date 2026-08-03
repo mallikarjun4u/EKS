@@ -1,0 +1,1154 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 4 – Docker Fundamentals
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* What containers are
+* Why Docker is used
+* Docker architecture
+* Docker images
+* Docker containers
+* Dockerfile
+* Docker Hub
+* Container networking
+* Container storage
+* Docker volumes
+* Docker Compose
+* Docker troubleshooting
+* How Docker connects with Kubernetes and EKS
+
+Docker is the foundation before learning Kubernetes because Kubernetes manages **containers**.
+
+---
+
+# 1. What is Docker?
+
+Docker is a platform used to build, package, distribute, and run applications inside containers.
+
+A container packages:
+
+* Application code
+* Runtime
+* Libraries
+* Dependencies
+* Configuration
+
+Everything required to run an application.
+
+Example:
+
+Without Docker:
+
+```text
+Developer Laptop
+
+Java Version 17
+Libraries
+Configuration
+
+↓
+
+Production Server
+
+Java Version 11
+Missing Libraries
+
+↓
+
+Application Failure
+```
+
+With Docker:
+
+```text
+Docker Container
+
+Application
+
++
+
+Runtime
+
++
+
+Libraries
+
++
+
+Configuration
+```
+
+The same container runs everywhere.
+
+---
+
+# 2. What is a Container?
+
+A container is a lightweight isolated environment that runs an application.
+
+Example:
+
+```text
+Server
+
+|
+├── Container 1
+│      └── Java Application
+│
+├── Container 2
+│      └── Python Application
+│
+└── Container 3
+       └── Nginx
+```
+
+Containers share the host operating system kernel.
+
+---
+
+# 3. Containers vs Virtual Machines
+
+## Virtual Machine Architecture
+
+```text
+Application
+
+↓
+
+Guest OS
+
+↓
+
+Hypervisor
+
+↓
+
+Physical Hardware
+```
+
+Each VM requires its own operating system.
+
+---
+
+## Container Architecture
+
+```text
+Application
+
+↓
+
+Container Runtime
+
+↓
+
+Host OS
+
+↓
+
+Hardware
+```
+
+Containers are:
+
+* Smaller
+* Faster
+* Easier to deploy
+* More portable
+
+---
+
+# 4. Why Docker?
+
+Before containers:
+
+```text
+Development
+
+"It works on my machine"
+
+↓
+
+Production
+
+"It fails"
+```
+
+Docker solves environment differences.
+
+Benefits:
+
+* Consistent environments
+* Fast deployment
+* Easy scaling
+* Version control
+* Microservices support
+
+---
+
+# 5. Docker Architecture
+
+Docker follows a client-server architecture.
+
+```text
+              Docker Client
+
+                   |
+                   |
+                   v
+
+             Docker Engine
+
+                   |
+        --------------------
+
+        Docker Images
+
+        Containers
+
+        Networks
+
+        Volumes
+```
+
+---
+
+# 6. Docker Components
+
+## Docker Client
+
+Command-line interface.
+
+Example:
+
+```bash
+docker run nginx
+```
+
+The client sends commands to Docker Engine.
+
+---
+
+## Docker Engine
+
+Main Docker service.
+
+Responsible for:
+
+* Creating containers
+* Managing images
+* Networking
+* Storage
+
+---
+
+## Docker Daemon
+
+Background service.
+
+Runs continuously:
+
+```text
+dockerd
+```
+
+---
+
+## Docker Registry
+
+Stores Docker images.
+
+Examples:
+
+* Docker Hub
+* Private registries
+* Amazon Elastic Container Registry (ECR)
+
+---
+
+# 7. Docker Image
+
+An image is a blueprint used to create containers.
+
+Example:
+
+```text
+Image
+
+↓
+
+Container
+```
+
+A Docker image contains:
+
+* Application
+* Dependencies
+* Libraries
+* Instructions
+
+---
+
+Example:
+
+```text
+nginx image
+
+↓
+
+nginx container
+```
+
+---
+
+# 8. Docker Container
+
+A running instance of an image.
+
+Example:
+
+```text
+Image:
+
+nginx:latest
+
+
+Creates:
+
+
+Container:
+
+nginx-web-server
+```
+
+---
+
+# 9. Docker Workflow
+
+Typical workflow:
+
+```text
+Developer
+
+↓
+
+Dockerfile
+
+↓
+
+Docker Image
+
+↓
+
+Container
+
+↓
+
+Docker Registry
+
+↓
+
+Production
+```
+
+---
+
+# 10. Installing Docker
+
+Check installation:
+
+```bash
+docker --version
+```
+
+Example output:
+
+```text
+Docker version 27.x
+```
+
+---
+
+Check Docker service:
+
+```bash
+systemctl status docker
+```
+
+---
+
+Start Docker:
+
+```bash
+sudo systemctl start docker
+```
+
+Enable at boot:
+
+```bash
+sudo systemctl enable docker
+```
+
+---
+
+# 11. Basic Docker Commands
+
+## Check Docker Information
+
+```bash
+docker info
+```
+
+---
+
+## List Images
+
+```bash
+docker images
+```
+
+Example:
+
+```text
+REPOSITORY   TAG
+
+nginx        latest
+```
+
+---
+
+## Pull Image
+
+Download image:
+
+```bash
+docker pull nginx
+```
+
+---
+
+## Run Container
+
+```bash
+docker run nginx
+```
+
+---
+
+Run in background:
+
+```bash
+docker run -d nginx
+```
+
+`-d` means detached mode.
+
+---
+
+## List Containers
+
+Running containers:
+
+```bash
+docker ps
+```
+
+All containers:
+
+```bash
+docker ps -a
+```
+
+---
+
+## Stop Container
+
+```bash
+docker stop container_id
+```
+
+---
+
+## Start Container
+
+```bash
+docker start container_id
+```
+
+---
+
+## Remove Container
+
+```bash
+docker rm container_id
+```
+
+---
+
+## Remove Image
+
+```bash
+docker rmi image_name
+```
+
+---
+
+# 12. Running Web Application Example
+
+Run nginx:
+
+```bash
+docker run -d -p 8080:80 nginx
+```
+
+Meaning:
+
+```text
+Host Port
+
+8080
+
+↓
+
+Container Port
+
+80
+```
+
+Access:
+
+```text
+http://server-ip:8080
+```
+
+---
+
+# 13. Docker Port Mapping
+
+Containers have internal ports.
+
+Example:
+
+```text
+Container
+
+nginx
+
+Port 80
+```
+
+Expose externally:
+
+```bash
+-p 8080:80
+```
+
+Architecture:
+
+```text
+User
+
+↓
+
+Server Port 8080
+
+↓
+
+Container Port 80
+
+↓
+
+Nginx
+```
+
+---
+
+# 14. Dockerfile
+
+Dockerfile defines how to build an image.
+
+Example:
+
+```dockerfile
+FROM nginx
+
+COPY index.html /usr/share/nginx/html
+
+EXPOSE 80
+```
+
+---
+
+## Dockerfile Instructions
+
+## FROM
+
+Base image.
+
+Example:
+
+```dockerfile
+FROM ubuntu
+```
+
+---
+
+## RUN
+
+Execute commands during image creation.
+
+Example:
+
+```dockerfile
+RUN apt update
+```
+
+---
+
+## COPY
+
+Copy files.
+
+Example:
+
+```dockerfile
+COPY app.jar /app/
+```
+
+---
+
+## WORKDIR
+
+Set working directory.
+
+Example:
+
+```dockerfile
+WORKDIR /app
+```
+
+---
+
+## EXPOSE
+
+Documents application port.
+
+Example:
+
+```dockerfile
+EXPOSE 8080
+```
+
+---
+
+## CMD
+
+Default command.
+
+Example:
+
+```dockerfile
+CMD ["java","-jar","app.jar"]
+```
+
+---
+
+# 15. Building Docker Image
+
+Example project:
+
+```text
+application/
+
+├── Dockerfile
+
+└── app.jar
+```
+
+Build:
+
+```bash
+docker build -t myapp:v1 .
+```
+
+Check:
+
+```bash
+docker images
+```
+
+---
+
+# 16. Running Custom Image
+
+```bash
+docker run -d -p 8080:8080 myapp:v1
+```
+
+---
+
+# 17. Docker Image Layers
+
+Docker images are built in layers.
+
+Example:
+
+```text
+Application Layer
+
+↓
+
+Dependencies Layer
+
+↓
+
+Runtime Layer
+
+↓
+
+Base OS Layer
+```
+
+Benefits:
+
+* Faster builds
+* Efficient storage
+* Image reuse
+
+---
+
+# 18. Docker Registry
+
+A registry stores images.
+
+Example workflow:
+
+```text
+Developer
+
+↓
+
+docker build
+
+↓
+
+Docker Image
+
+↓
+
+docker push
+
+↓
+
+Registry
+
+↓
+
+docker pull
+
+↓
+
+Production
+```
+
+---
+
+# 19. Docker Hub
+
+Public image repository.
+
+Examples:
+
+```text
+nginx
+
+mysql
+
+redis
+
+ubuntu
+```
+
+Download:
+
+```bash
+docker pull mysql
+```
+
+---
+
+# 20. Amazon Elastic Container Registry (ECR)
+
+AWS private Docker registry.
+
+Used with EKS.
+
+Architecture:
+
+```text
+Developer
+
+↓
+
+Docker Image
+
+↓
+
+Amazon ECR
+
+↓
+
+EKS Cluster
+
+↓
+
+Pods
+```
+
+---
+
+# 21. Docker Volumes
+
+Containers are temporary.
+
+Example:
+
+```text
+Container deleted
+
+↓
+
+Data deleted
+```
+
+Volumes provide persistent storage.
+
+---
+
+Create volume:
+
+```bash
+docker volume create data-volume
+```
+
+Use volume:
+
+```bash
+docker run \
+-v data-volume:/data \
+mysql
+```
+
+---
+
+# 22. Docker Networking
+
+Containers communicate through networks.
+
+List networks:
+
+```bash
+docker network ls
+```
+
+---
+
+Create network:
+
+```bash
+docker network create app-network
+```
+
+---
+
+Run container:
+
+```bash
+docker run \
+--network app-network \
+nginx
+```
+
+---
+
+# 23. Docker Compose
+
+Docker Compose manages multiple containers.
+
+Example application:
+
+```text
+Application
+
+↓
+
+Database
+
+↓
+
+Cache
+```
+
+Create:
+
+```yaml
+version: "3"
+
+services:
+
+  app:
+    image: myapp
+
+  database:
+    image: mysql
+```
+
+Start:
+
+```bash
+docker compose up
+```
+
+---
+
+# 24. Container Logs
+
+View logs:
+
+```bash
+docker logs container_id
+```
+
+Follow logs:
+
+```bash
+docker logs -f container_id
+```
+
+---
+
+# 25. Enter Running Container
+
+Access shell:
+
+```bash
+docker exec -it container_id bash
+```
+
+Example:
+
+```bash
+docker exec -it nginx bash
+```
+
+---
+
+# 26. Docker Resource Limits
+
+Limit memory:
+
+```bash
+docker run \
+--memory=512m \
+nginx
+```
+
+Limit CPU:
+
+```bash
+docker run \
+--cpus=1 \
+nginx
+```
+
+Kubernetes uses similar resource concepts.
+
+---
+
+# 27. Docker Security Basics
+
+Best practices:
+
+* Use trusted images
+* Scan images
+* Avoid running as root
+* Keep images updated
+* Use minimal base images
+* Do not store secrets inside images
+
+---
+
+# 28. Docker and Kubernetes Relationship
+
+Docker creates containers.
+
+Kubernetes manages containers.
+
+Relationship:
+
+```text
+Dockerfile
+
+↓
+
+Docker Image
+
+↓
+
+Container
+
+↓
+
+Kubernetes Pod
+
+↓
+
+EKS Cluster
+```
+
+---
+
+# 29. EKS Container Flow
+
+Production example:
+
+```text
+Developer
+
+↓
+
+Docker Build
+
+↓
+
+Image
+
+↓
+
+Amazon ECR
+
+↓
+
+EKS Cluster
+
+↓
+
+Worker Node
+
+↓
+
+Pod
+
+↓
+
+Container
+```
+
+---
+
+# 30. Common Docker Troubleshooting
+
+## Container not starting
+
+Check:
+
+```bash
+docker ps -a
+```
+
+Logs:
+
+```bash
+docker logs container_id
+```
+
+---
+
+## Application unreachable
+
+Check:
+
+```bash
+docker port container_id
+```
+
+---
+
+## High memory usage
+
+Check:
+
+```bash
+docker stats
+```
+
+---
+
+## Image problem
+
+List images:
+
+```bash
+docker images
+```
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ Containers
+✅ Docker architecture
+✅ Images
+✅ Containers
+✅ Dockerfile
+✅ Docker Hub
+✅ ECR
+✅ Volumes
+✅ Networking
+✅ Docker Compose
+✅ Logs
+✅ Troubleshooting
+✅ Docker and Kubernetes relationship
+
+---
+
+# Hands-on Lab
+
+Complete these tasks:
+
+1. Install Docker on an EC2 Linux instance.
+2. Pull nginx image.
+3. Run nginx container.
+4. Map port 8080.
+5. Create a custom Docker image.
+6. Push image to Amazon ECR.
+7. Create a Docker Compose application.
+8. Inspect logs and container resources.
+
+---
+
+# Next Chapter
+
+## Chapter 5 – Kubernetes Fundamentals
+
+Topics:
+
+* Why Kubernetes exists
+* Kubernetes architecture
+* Control plane components
+* Worker nodes
+* Pods
+* ReplicaSets
+* Deployments
+* Services
+* Namespaces
+* Labels
+* Selectors
+* kubectl commands
+* Kubernetes YAML files
+
+This chapter starts the core Kubernetes journey before moving into Amazon EKS.
