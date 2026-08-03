@@ -1,0 +1,940 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 16 – EKS Interview Preparation
+
+## Learning Objectives
+
+After completing this chapter, you will be able to:
+
+* Answer beginner to advanced EKS interview questions
+* Explain EKS architecture confidently
+* Troubleshoot production issues
+* Discuss Kubernetes networking, security, storage, and deployments
+* Handle real-world DevOps scenarios
+
+---
+
+# Part 1 – Kubernetes Fundamentals Interview Questions
+
+---
+
+## 1. What is Kubernetes?
+
+**Answer:**
+
+Kubernetes is an open-source container orchestration platform used to automate:
+
+* Deployment
+* Scaling
+* Networking
+* Load balancing
+* Self-healing
+* Management of containerized applications
+
+Example:
+
+```text
+Application
+
+   |
+
+Container
+
+   |
+
+Kubernetes
+
+   |
+
+Infrastructure
+```
+
+---
+
+# 2. What is Amazon EKS?
+
+**Answer:**
+
+Amazon Elastic Kubernetes Service (EKS) is AWS's managed Kubernetes service.
+
+AWS manages:
+
+* Kubernetes control plane
+* API server
+* etcd database
+* Control plane availability
+
+Users manage:
+
+* Applications
+* Worker nodes
+* Kubernetes resources
+
+---
+
+# 3. Explain EKS Architecture
+
+Answer:
+
+```
+              Users
+
+                |
+
+          Kubernetes API
+
+                |
+
+        EKS Control Plane
+
+                |
+
+        -----------------
+
+        Worker Nodes
+
+        Pods
+
+        Containers
+
+        -----------------
+```
+
+Components:
+
+* EKS Control Plane
+* Worker Nodes
+* Pods
+* Services
+* Networking
+
+---
+
+# 4. Difference Between Kubernetes and EKS
+
+| Kubernetes               | EKS                       |
+| ------------------------ | ------------------------- |
+| Open source              | AWS managed service       |
+| You manage control plane | AWS manages control plane |
+| Runs anywhere            | Runs on AWS               |
+| Manual setup             | AWS integration           |
+
+---
+
+# 5. What are Kubernetes Objects?
+
+Common objects:
+
+* Pod
+* Deployment
+* Service
+* ConfigMap
+* Secret
+* Namespace
+* Ingress
+* StatefulSet
+* DaemonSet
+
+---
+
+# Part 2 – EKS Architecture Questions
+
+---
+
+# 6. What components are inside the EKS Control Plane?
+
+Answer:
+
+The control plane contains:
+
+## API Server
+
+Receives Kubernetes commands.
+
+Example:
+
+```bash
+kubectl get pods
+```
+
+---
+
+## Scheduler
+
+Decides where Pods run.
+
+---
+
+## Controller Manager
+
+Maintains desired state.
+
+Example:
+
+Desired:
+
+```
+3 Pods
+```
+
+Current:
+
+```
+2 Pods
+```
+
+Controller creates:
+
+```
+1 Pod
+```
+
+---
+
+## etcd
+
+Stores Kubernetes cluster data.
+
+---
+
+# 7. Who manages the EKS Control Plane?
+
+Answer:
+
+AWS manages:
+
+* Availability
+* Patching
+* Upgrades
+* Control plane infrastructure
+
+---
+
+# 8. What are Worker Nodes?
+
+Worker nodes are EC2 instances or Fargate compute where Pods run.
+
+Components:
+
+```
+Worker Node
+
+ |
+
+kubelet
+
+ |
+
+Container Runtime
+
+ |
+
+Pods
+```
+
+---
+
+# 9. What is kubelet?
+
+Answer:
+
+kubelet is an agent running on every worker node.
+
+Responsibilities:
+
+* Communicates with API server
+* Starts containers
+* Reports node status
+
+---
+
+# Part 3 – Kubernetes Workload Questions
+
+---
+
+# 10. Difference Between Pod and Deployment?
+
+## Pod
+
+Smallest Kubernetes execution unit.
+
+Example:
+
+```
+Pod
+
+ |
+
+Container
+```
+
+---
+
+## Deployment
+
+Manages Pods.
+
+Example:
+
+```
+Deployment
+
+ |
+
+ReplicaSet
+
+ |
+
+Pods
+```
+
+---
+
+# 11. What happens when a Pod crashes?
+
+Kubernetes automatically:
+
+1. Detects failure
+2. Removes failed Pod
+3. Creates replacement Pod
+
+This is self-healing.
+
+---
+
+# 12. Difference Between Deployment and StatefulSet?
+
+| Deployment       | StatefulSet      |
+| ---------------- | ---------------- |
+| Stateless apps   | Stateful apps    |
+| Random Pod names | Stable Pod names |
+| Web servers      | Databases        |
+
+Example:
+
+Deployment:
+
+```
+web-x83jd
+web-k91ka
+```
+
+StatefulSet:
+
+```
+mysql-0
+mysql-1
+mysql-2
+```
+
+---
+
+# Part 4 – Networking Interview Questions
+
+---
+
+# 13. Explain EKS Networking
+
+EKS networking uses:
+
+* VPC
+* Subnets
+* Security Groups
+* AWS VPC CNI
+
+Architecture:
+
+```
+Pod
+
+ |
+
+ENI
+
+ |
+
+AWS VPC
+
+ |
+
+Network
+```
+
+---
+
+# 14. What is AWS VPC CNI?
+
+Answer:
+
+VPC CNI allows Kubernetes Pods to receive AWS VPC IP addresses.
+
+Benefits:
+
+* Native AWS networking
+* Better performance
+* Security integration
+
+---
+
+# 15. Difference Between ClusterIP, NodePort, and LoadBalancer?
+
+## ClusterIP
+
+Internal communication.
+
+Example:
+
+```
+Pod → Service → Pod
+```
+
+---
+
+## NodePort
+
+Exposes application through node IP.
+
+---
+
+## LoadBalancer
+
+Creates AWS Load Balancer.
+
+Example:
+
+```
+Internet
+
+ |
+
+ALB
+
+ |
+
+Service
+
+ |
+
+Pods
+```
+
+---
+
+# 16. What is Ingress?
+
+Ingress manages external HTTP/HTTPS traffic.
+
+Example:
+
+```
+User
+
+ |
+
+Ingress
+
+ |
+
+Services
+
+ |
+
+Pods
+```
+
+---
+
+# Part 5 – Storage Questions
+
+---
+
+# 17. How does EKS handle storage?
+
+Through:
+
+* EBS
+* EFS
+* CSI drivers
+
+---
+
+# 18. Difference Between EBS and EFS?
+
+| EBS                | EFS          |
+| ------------------ | ------------ |
+| Block storage      | File storage |
+| Single AZ          | Multi AZ     |
+| Database workloads | Shared files |
+
+---
+
+# 19. What is Persistent Volume?
+
+A storage resource in Kubernetes.
+
+Architecture:
+
+```
+Pod
+
+ |
+
+PVC
+
+ |
+
+PV
+
+ |
+
+AWS Storage
+```
+
+---
+
+# Part 6 – Security Questions
+
+---
+
+# 20. How do you secure an EKS cluster?
+
+Best practices:
+
+* IAM
+* RBAC
+* Network Policies
+* Secrets management
+* Encryption
+* Private nodes
+* Image scanning
+
+---
+
+# 21. What is IAM Role for Service Account (IRSA)?
+
+IRSA allows Kubernetes Pods to access AWS services securely.
+
+Example:
+
+```
+Pod
+
+ |
+
+IAM Role
+
+ |
+
+S3 Access
+```
+
+Without storing AWS credentials.
+
+---
+
+# 22. Difference Between IAM and RBAC?
+
+## IAM
+
+Controls AWS permissions.
+
+Example:
+
+```
+Access S3
+Create EC2
+```
+
+---
+
+## RBAC
+
+Controls Kubernetes permissions.
+
+Example:
+
+```
+Create Pods
+Delete Services
+```
+
+---
+
+# Part 7 – Deployment Questions
+
+---
+
+# 23. Explain Rolling Update
+
+Old Pods are gradually replaced.
+
+Example:
+
+```
+Version 1
+
+Pod
+Pod
+Pod
+
+
+Update
+
+
+Version 2
+
+Pod
+Pod
+Pod
+```
+
+---
+
+# 24. How do you rollback a deployment?
+
+Command:
+
+```bash
+kubectl rollout undo deployment app
+```
+
+---
+
+# 25. Difference Between Blue-Green and Canary Deployment?
+
+## Blue-Green
+
+Two complete environments.
+
+```
+Blue = Old
+
+Green = New
+```
+
+Switch traffic.
+
+---
+
+## Canary
+
+Small percentage receives new version.
+
+```
+90% v1
+
+10% v2
+```
+
+---
+
+# Part 8 – Monitoring Questions
+
+---
+
+# 26. How do you monitor EKS?
+
+Tools:
+
+* CloudWatch
+* Prometheus
+* Grafana
+* Fluent Bit
+
+---
+
+# 27. How do you check Pod resource usage?
+
+Command:
+
+```bash
+kubectl top pods
+```
+
+---
+
+# 28. How do you check Pod logs?
+
+Command:
+
+```bash
+kubectl logs pod-name
+```
+
+---
+
+# Part 9 – Troubleshooting Scenarios
+
+---
+
+# Scenario 1
+
+## Pod is stuck in Pending state.
+
+Possible reasons:
+
+* No available nodes
+* Resource shortage
+* Node selector mismatch
+* Taints
+
+Debug:
+
+```bash
+kubectl describe pod pod-name
+```
+
+---
+
+# Scenario 2
+
+## Pod is CrashLoopBackOff.
+
+Check:
+
+```bash
+kubectl logs pod-name
+```
+
+Possible causes:
+
+* Application crash
+* Wrong configuration
+* Missing secrets
+
+---
+
+# Scenario 3
+
+## Application is not reachable.
+
+Check:
+
+1. Pod status
+
+```bash
+kubectl get pods
+```
+
+2. Service
+
+```bash
+kubectl get svc
+```
+
+3. Ingress
+
+```bash
+kubectl get ingress
+```
+
+4. Logs
+
+```bash
+kubectl logs
+```
+
+---
+
+# Scenario 4
+
+## Node is NotReady.
+
+Check:
+
+```bash
+kubectl describe node node-name
+```
+
+Possible causes:
+
+* kubelet issue
+* Network problem
+* Disk pressure
+
+---
+
+# Part 10 – Senior Level EKS Questions
+
+---
+
+# 29. How would you design a production EKS cluster?
+
+Answer:
+
+I would implement:
+
+* Multi-AZ architecture
+* Private worker nodes
+* Managed Node Groups
+* Auto Scaling
+* IAM security
+* Monitoring
+* Logging
+* Backup
+* Disaster recovery
+
+---
+
+# 30. How do you reduce EKS cost?
+
+Strategies:
+
+* Use Spot Instances
+* Use Karpenter
+* Right-size Pods
+* Autoscaling
+* Remove unused resources
+* Use efficient instance types
+
+---
+
+# 31. How do you upgrade an EKS cluster?
+
+Process:
+
+```
+Backup
+
+↓
+
+Upgrade Control Plane
+
+↓
+
+Upgrade Add-ons
+
+↓
+
+Upgrade Worker Nodes
+
+↓
+
+Validate Applications
+```
+
+---
+
+# 32. How do you handle a production outage?
+
+Approach:
+
+1. Identify impact
+2. Check monitoring alerts
+3. Check recent deployments
+4. Review logs
+5. Rollback if required
+6. Fix root cause
+7. Document incident
+
+---
+
+# Important Commands for Interviews
+
+## Cluster
+
+```bash
+kubectl cluster-info
+```
+
+---
+
+## Nodes
+
+```bash
+kubectl get nodes
+```
+
+---
+
+## Pods
+
+```bash
+kubectl get pods -A
+```
+
+---
+
+## Events
+
+```bash
+kubectl get events
+```
+
+---
+
+## Describe Resource
+
+```bash
+kubectl describe pod pod-name
+```
+
+---
+
+## Logs
+
+```bash
+kubectl logs pod-name
+```
+
+---
+
+# EKS Interview Preparation Checklist
+
+## Beginner Level
+
+✅ Kubernetes basics
+✅ Pods
+✅ Deployments
+✅ Services
+✅ EKS architecture
+
+---
+
+## Intermediate Level
+
+✅ Networking
+✅ Storage
+✅ Security
+✅ Helm
+✅ CI/CD
+
+---
+
+## Advanced Level
+
+✅ Production architecture
+✅ Disaster recovery
+✅ Karpenter
+✅ Cost optimization
+✅ Troubleshooting
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ EKS interview fundamentals
+✅ Architecture questions
+✅ Networking questions
+✅ Storage questions
+✅ Security questions
+✅ Deployment questions
+✅ Monitoring questions
+✅ Production troubleshooting scenarios
+
+---
+
+# Next Chapter
+
+# Chapter 17 – EKS Certification Preparation (Final Chapter)
+
+Topics:
+
+* AWS certification topics related to EKS
+* Kubernetes certification concepts
+* Exam-focused notes
+* Practice questions
+* Final EKS revision guide
+* Complete zero-to-hero roadmap summary
