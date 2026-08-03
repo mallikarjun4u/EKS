@@ -1,0 +1,765 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 17 – EKS Certification Preparation and Final Revision Guide
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* AWS certification topics related to EKS
+* Kubernetes certification concepts
+* Important EKS exam areas
+* Practical hands-on skills required
+* Final revision checklist
+* Complete EKS learning roadmap
+
+---
+
+# 1. EKS Certification Landscape
+
+There is no single "EKS certification", but EKS knowledge is tested in multiple certifications:
+
+## AWS Certifications
+
+Relevant:
+
+* AWS Certified Solutions Architect
+* AWS Certified DevOps Engineer
+
+Topics include:
+
+* EKS architecture
+* Networking
+* Security
+* IAM
+* Load balancing
+* Storage
+* Monitoring
+
+---
+
+## Kubernetes Certifications
+
+Relevant:
+
+* Certified Kubernetes Administrator (CKA)
+* Certified Kubernetes Application Developer (CKAD)
+
+Topics include:
+
+* Kubernetes administration
+* Workloads
+* Networking
+* Storage
+* Troubleshooting
+
+---
+
+# 2. EKS Exam Topic Map
+
+```text
+Amazon EKS
+
+ |
+
+ |-- Architecture
+
+ |-- Networking
+
+ |-- Security
+
+ |-- Storage
+
+ |-- Deployment
+
+ |-- Monitoring
+
+ |-- Troubleshooting
+
+ |-- Cost Optimization
+```
+
+---
+
+# 3. EKS Architecture Revision
+
+## Control Plane
+
+Managed by AWS.
+
+Components:
+
+* API Server
+* Scheduler
+* Controller Manager
+* etcd
+
+Architecture:
+
+```text id="m3r8q2"
+                 kubectl
+
+                    |
+
+              API Server
+
+                    |
+
+     ----------------------------
+
+     Scheduler
+
+     Controller Manager
+
+     etcd
+
+     ----------------------------
+
+                    |
+
+              Worker Nodes
+```
+
+---
+
+# 4. Worker Node Revision
+
+Worker node contains:
+
+## kubelet
+
+Communicates with control plane.
+
+## Container Runtime
+
+Runs containers.
+
+Examples:
+
+* containerd
+
+## kube-proxy
+
+Handles networking rules.
+
+---
+
+# 5. EKS Networking Revision
+
+Important concepts:
+
+## VPC
+
+Provides AWS networking.
+
+## Subnets
+
+Recommended:
+
+* Public subnet → Load balancers
+* Private subnet → Worker nodes
+
+---
+
+Architecture:
+
+```text id="p2m7x9"
+
+Internet
+
+   |
+
+Public Subnet
+
+   |
+
+ALB
+
+   |
+
+Private Subnet
+
+   |
+
+EKS Nodes
+
+   |
+
+Pods
+```
+
+---
+
+# 6. AWS VPC CNI Revision
+
+Important points:
+
+* Pods receive VPC IP addresses
+* Uses Elastic Network Interfaces
+* Provides native AWS networking
+
+---
+
+# 7. Kubernetes Networking Revision
+
+Know:
+
+## Service Types
+
+### ClusterIP
+
+Internal communication.
+
+### NodePort
+
+Node-based access.
+
+### LoadBalancer
+
+AWS Load Balancer integration.
+
+### Ingress
+
+HTTP routing.
+
+---
+
+# 8. Storage Revision
+
+## EBS
+
+Use cases:
+
+* Databases
+* Single-node storage
+
+Characteristics:
+
+* Block storage
+* Persistent volumes
+
+---
+
+## EFS
+
+Use cases:
+
+* Shared files
+* Multiple Pods
+
+Characteristics:
+
+* File storage
+* Multi-AZ
+
+---
+
+Storage flow:
+
+```text id="q8m5n1"
+
+Pod
+
+ |
+
+PVC
+
+ |
+
+PV
+
+ |
+
+CSI Driver
+
+ |
+
+AWS Storage
+```
+
+---
+
+# 9. Security Revision
+
+Important security areas:
+
+---
+
+## IAM
+
+Controls AWS permissions.
+
+Example:
+
+```text id="k7p4m2"
+
+Pod
+
+ |
+
+IAM Role
+
+ |
+
+S3 Access
+```
+
+---
+
+## RBAC
+
+Controls Kubernetes permissions.
+
+Example:
+
+```text id="x8q2s5"
+
+Developer
+
+ |
+
+Kubernetes Role
+
+ |
+
+Namespace Access
+```
+
+---
+
+## Encryption
+
+Enable:
+
+* Secrets encryption
+* Data encryption
+* Network security
+
+---
+
+# 10. Workload Revision
+
+Important Kubernetes objects:
+
+| Object      | Purpose                 |
+| ----------- | ----------------------- |
+| Pod         | Runs containers         |
+| Deployment  | Manages replicas        |
+| Service     | Network access          |
+| ConfigMap   | Configuration           |
+| Secret      | Sensitive data          |
+| StatefulSet | Stateful applications   |
+| DaemonSet   | Node-level applications |
+
+---
+
+# 11. Deployment Revision
+
+Deployment strategies:
+
+## Rolling Update
+
+Default strategy.
+
+```text id="v4m8q2"
+
+Old Pods
+
+↓
+
+New Pods
+
+↓
+
+Complete Migration
+```
+
+---
+
+## Blue-Green
+
+Two environments:
+
+```text id="b9n2m7"
+
+Blue
+
+Old Version
+
+
+Green
+
+New Version
+```
+
+---
+
+## Canary
+
+Gradual release:
+
+```text id="z6m3k8"
+
+90% Users → v1
+
+10% Users → v2
+```
+
+---
+
+# 12. Monitoring Revision
+
+Three pillars:
+
+## Metrics
+
+Examples:
+
+* CPU
+* Memory
+* Requests
+
+Tools:
+
+* CloudWatch
+* Prometheus
+
+---
+
+## Logs
+
+Tools:
+
+* Fluent Bit
+* CloudWatch Logs
+
+---
+
+## Visualization
+
+Tools:
+
+* Grafana
+* CloudWatch Dashboards
+
+---
+
+# 13. Troubleshooting Revision
+
+## Pod Problems
+
+Commands:
+
+```bash
+kubectl get pods
+```
+
+```bash
+kubectl describe pod pod-name
+```
+
+```bash
+kubectl logs pod-name
+```
+
+---
+
+## Node Problems
+
+Commands:
+
+```bash
+kubectl get nodes
+```
+
+```bash
+kubectl describe node node-name
+```
+
+---
+
+## Network Problems
+
+Check:
+
+```bash
+kubectl get svc
+```
+
+```bash
+kubectl get ingress
+```
+
+---
+
+# 14. Important Kubernetes Commands
+
+## Cluster
+
+```bash
+kubectl cluster-info
+```
+
+---
+
+## Resources
+
+```bash
+kubectl get all
+```
+
+---
+
+## Namespaces
+
+```bash
+kubectl get namespaces
+```
+
+---
+
+## Apply Configuration
+
+```bash
+kubectl apply -f file.yaml
+```
+
+---
+
+## Delete Resource
+
+```bash
+kubectl delete -f file.yaml
+```
+
+---
+
+## Scaling
+
+```bash
+kubectl scale deployment app --replicas=5
+```
+
+---
+
+## Rollback
+
+```bash
+kubectl rollout undo deployment app
+```
+
+---
+
+# 15. Hands-On Skills Checklist
+
+A production EKS engineer should be able to:
+
+## Infrastructure
+
+✅ Create VPC
+✅ Create EKS cluster
+✅ Configure node groups
+✅ Configure IAM
+
+---
+
+## Kubernetes
+
+✅ Deploy applications
+✅ Configure services
+✅ Manage ingress
+✅ Configure storage
+
+---
+
+## DevOps
+
+✅ Build Docker images
+✅ Create Helm charts
+✅ Build CI/CD pipelines
+✅ Implement GitOps
+
+---
+
+## Operations
+
+✅ Monitor clusters
+✅ Troubleshoot failures
+✅ Perform upgrades
+✅ Manage backups
+
+---
+
+# 16. Final EKS Production Architecture
+
+Complete enterprise design:
+
+```text id="r7m4x9"
+
+                         Users
+
+                           |
+
+                       Route 53
+
+                           |
+
+                          WAF
+
+                           |
+
+                         ALB
+
+                           |
+
+                       Ingress
+
+                           |
+
+                    Kubernetes Services
+
+                           |
+
+        --------------------------------------
+
+                    EKS Cluster
+
+
+              Node Groups
+
+              Karpenter
+
+              Spot Nodes
+
+
+        --------------------------------------
+
+
+        Monitoring:
+
+        Prometheus
+
+        Grafana
+
+        CloudWatch
+
+
+        Security:
+
+        IAM
+
+        RBAC
+
+        Secrets
+
+
+        Backup:
+
+        Velero
+
+        S3
+
+        --------------------------------------
+```
+
+---
+
+# 17. 90-Day EKS Learning Plan
+
+## Days 1-30: Fundamentals
+
+Learn:
+
+* Linux basics
+* Docker
+* Kubernetes basics
+* YAML
+* kubectl
+
+---
+
+## Days 31-60: EKS Skills
+
+Learn:
+
+* EKS creation
+* Networking
+* Storage
+* Security
+* Helm
+* CI/CD
+
+---
+
+## Days 61-90: Production Skills
+
+Learn:
+
+* Terraform
+* GitOps
+* Monitoring
+* Troubleshooting
+* Architecture design
+
+---
+
+# 18. Final Project Portfolio
+
+Build:
+
+## Production EKS Platform
+
+Include:
+
+✅ Terraform infrastructure
+✅ EKS cluster
+✅ Private networking
+✅ Application deployment
+✅ Helm charts
+✅ GitHub Actions pipeline
+✅ Argo CD deployment
+✅ Prometheus monitoring
+✅ Grafana dashboards
+✅ Security configuration
+✅ Backup strategy
+
+---
+
+# Complete EKS Zero to Hero Roadmap Completed
+
+## Chapters Covered:
+
+✅ Chapter 1 – Kubernetes and EKS Introduction
+✅ Chapter 2 – Kubernetes Fundamentals
+✅ Chapter 3 – AWS Fundamentals
+✅ Chapter 4 – EKS Architecture
+✅ Chapter 5 – Creating EKS Clusters
+✅ Chapter 6 – Workloads
+✅ Chapter 7 – Networking Basics
+✅ Chapter 8 – Networking Deep Dive
+✅ Chapter 9 – Storage
+✅ Chapter 10 – Security
+✅ Chapter 11 – CI/CD and Deployments
+✅ Chapter 12 – Monitoring and Troubleshooting
+✅ Chapter 13 – Production Architecture
+✅ Chapter 14 – Advanced EKS
+✅ Chapter 15 – Real-World Projects
+✅ Chapter 16 – Interview Preparation
+✅ Chapter 17 – Certification Preparation
+
+---
+
+# Final Goal
+
+After completing this roadmap, you should be able to:
+
+* Build EKS clusters
+* Deploy production applications
+* Secure Kubernetes workloads
+* Automate deployments
+* Monitor applications
+* Troubleshoot failures
+* Design enterprise EKS architectures
+* Prepare for DevOps/SRE interviews
+
+🎯 **Amazon EKS Zero to Hero course completed.**
