@@ -1,0 +1,1192 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 10 – EKS Security Deep Dive
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* Kubernetes security model
+* Shared responsibility model in EKS
+* AWS IAM integration
+* Authentication vs Authorization
+* Kubernetes RBAC
+* Users, Groups, and Service Accounts
+* IAM Roles for Service Accounts (IRSA)
+* Secrets management
+* Pod Security Standards
+* Container image security
+* Network security
+* Security best practices for production EKS clusters
+
+Security is one of the most important skills for running production Kubernetes workloads.
+
+---
+
+# 1. EKS Security Overview
+
+Amazon EKS security has multiple layers:
+
+```text
+                 Security Layers
+
+
+        Application Security
+
+                |
+
+        Container Security
+
+                |
+
+        Kubernetes Security
+
+                |
+
+        Network Security
+
+                |
+
+        AWS IAM Security
+
+                |
+
+        Infrastructure Security
+```
+
+---
+
+# 2. AWS Shared Responsibility Model
+
+Security responsibilities are divided between AWS and the customer.
+
+```text
+AWS Responsibility
+
+----------------------
+
+EKS Control Plane
+
+Physical Infrastructure
+
+Managed Kubernetes Components
+
+
+Customer Responsibility
+
+----------------------
+
+Worker Nodes
+
+Applications
+
+Container Images
+
+IAM Permissions
+
+Network Rules
+
+Data Protection
+```
+
+---
+
+# 3. EKS Security Architecture
+
+Production EKS security:
+
+```text
+                User
+
+                 |
+
+             AWS IAM
+
+                 |
+
+          EKS Authentication
+
+                 |
+
+          Kubernetes RBAC
+
+                 |
+
+          Kubernetes Resources
+
+                 |
+
+              Pods
+```
+
+---
+
+# 4. Authentication vs Authorization
+
+Two different concepts:
+
+## Authentication
+
+Answers:
+
+"Who are you?"
+
+Example:
+
+```text
+User → IAM Identity
+```
+
+---
+
+## Authorization
+
+Answers:
+
+"What can you do?"
+
+Example:
+
+```text
+User
+
+Can:
+
+✔ View Pods
+
+✘ Delete Nodes
+```
+
+---
+
+# 5. AWS IAM Authentication
+
+EKS integrates with AWS IAM.
+
+Example:
+
+```text
+Developer
+
+↓
+
+IAM User / Role
+
+↓
+
+EKS Cluster
+
+↓
+
+Kubernetes Permissions
+```
+
+---
+
+# 6. kubeconfig Authentication
+
+When you run:
+
+```bash
+kubectl get pods
+```
+
+The flow:
+
+```text
+kubectl
+
+↓
+
+AWS CLI
+
+↓
+
+IAM Authentication
+
+↓
+
+EKS API Server
+
+↓
+
+RBAC Check
+
+↓
+
+Permission Granted
+```
+
+---
+
+# 7. IAM Users vs IAM Roles
+
+## IAM User
+
+Usually for:
+
+* Human users
+* Administrators
+
+Example:
+
+```text
+Developer
+
+↓
+
+IAM User
+
+↓
+
+EKS Access
+```
+
+---
+
+## IAM Role
+
+Used for:
+
+* Applications
+* AWS services
+* Temporary permissions
+
+Example:
+
+```text
+Pod
+
+↓
+
+IAM Role
+
+↓
+
+S3 Access
+```
+
+---
+
+# 8. Kubernetes RBAC
+
+RBAC means:
+
+**Role-Based Access Control**
+
+It controls permissions inside Kubernetes.
+
+Architecture:
+
+```text
+User
+
+↓
+
+Role
+
+↓
+
+RoleBinding
+
+↓
+
+Permission
+```
+
+---
+
+# 9. RBAC Components
+
+Main objects:
+
+* Role
+* ClusterRole
+* RoleBinding
+* ClusterRoleBinding
+
+---
+
+# 10. Role
+
+A Role defines permissions inside a namespace.
+
+Example:
+
+Allow viewing Pods:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+
+kind: Role
+
+metadata:
+
+ name: pod-reader
+
+
+rules:
+
+- apiGroups: [""]
+
+  resources: ["pods"]
+
+  verbs: ["get","list"]
+```
+
+---
+
+# 11. RoleBinding
+
+Connects a user with a Role.
+
+Example:
+
+```text
+User
+
+↓
+
+RoleBinding
+
+↓
+
+Role
+
+↓
+
+Permission
+```
+
+---
+
+Example:
+
+```yaml
+kind: RoleBinding
+
+metadata:
+
+ name: read-pods
+
+
+subjects:
+
+- kind: User
+
+  name: developer
+
+
+roleRef:
+
+ kind: Role
+
+ name: pod-reader
+```
+
+---
+
+# 12. ClusterRole
+
+ClusterRole works across the entire cluster.
+
+Example:
+
+Administrator permissions:
+
+```text
+ClusterRole
+
+↓
+
+All Namespaces
+
+↓
+
+All Resources
+```
+
+---
+
+# 13. ClusterRoleBinding
+
+Connects users to ClusterRoles.
+
+Example:
+
+```text
+Admin User
+
+↓
+
+ClusterRoleBinding
+
+↓
+
+Cluster Administrator
+```
+
+---
+
+# 14. RBAC Example
+
+Developer:
+
+Allowed:
+
+```text
+✔ View Pods
+
+✔ View Services
+```
+
+Denied:
+
+```text
+✘ Delete Cluster
+
+✘ Modify Nodes
+```
+
+---
+
+# 15. Service Accounts
+
+A Service Account provides identity to Pods.
+
+Example:
+
+```text
+Pod
+
+↓
+
+Service Account
+
+↓
+
+Permissions
+```
+
+---
+
+Create:
+
+```bash
+kubectl create serviceaccount app-sa
+```
+
+---
+
+Use in Pod:
+
+```yaml
+spec:
+
+ serviceAccountName: app-sa
+```
+
+---
+
+# 16. IAM Roles for Service Accounts (IRSA)
+
+IRSA connects Kubernetes Service Accounts with AWS IAM Roles.
+
+Without IRSA:
+
+```text
+Application
+
+↓
+
+AWS Access Keys
+
+↓
+
+S3
+```
+
+Problem:
+
+* Credentials inside application
+* Security risk
+
+---
+
+With IRSA:
+
+```text
+Application Pod
+
+↓
+
+Kubernetes Service Account
+
+↓
+
+IAM Role
+
+↓
+
+AWS Service
+```
+
+---
+
+# 17. IRSA Example
+
+Application:
+
+```text
+Backend API Pod
+```
+
+Needs:
+
+```text
+Amazon S3 Access
+```
+
+Flow:
+
+```text
+Pod
+
+↓
+
+Service Account
+
+↓
+
+IAM Role
+
+↓
+
+S3 Bucket
+```
+
+No AWS keys required.
+
+---
+
+# 18. Secrets Management
+
+Applications need secrets:
+
+Examples:
+
+* Database passwords
+* API keys
+* Tokens
+
+---
+
+Basic Kubernetes Secret:
+
+```yaml
+apiVersion: v1
+
+kind: Secret
+
+metadata:
+
+ name: database-password
+```
+
+---
+
+# 19. Kubernetes Secrets Security
+
+Important:
+
+Kubernetes Secrets are Base64 encoded, not encrypted by default.
+
+Base64:
+
+```text
+password
+
+↓
+
+cGFzc3dvcmQ=
+```
+
+Anyone with permission can decode.
+
+---
+
+# 20. AWS Secrets Manager Integration
+
+Production applications often use:
+
+AWS Secrets Manager
+
+Architecture:
+
+```text
+Application Pod
+
+↓
+
+Secrets Store CSI Driver
+
+↓
+
+AWS Secrets Manager
+
+↓
+
+Secret Value
+```
+
+Benefits:
+
+* Centralized secrets
+* Automatic rotation
+* Auditing
+
+---
+
+# 21. Encryption at Rest
+
+Protect stored data.
+
+Examples:
+
+* EBS encryption
+* EFS encryption
+* Kubernetes secret encryption
+
+Architecture:
+
+```text
+Data
+
+↓
+
+Encryption
+
+↓
+
+AWS KMS Key
+
+↓
+
+Encrypted Storage
+```
+
+---
+
+# 22. Encryption in Transit
+
+Protect network communication.
+
+Examples:
+
+* HTTPS
+* TLS
+* mTLS
+
+Flow:
+
+```text
+Client
+
+↓
+
+Encrypted Connection
+
+↓
+
+Application
+```
+
+---
+
+# 23. Pod Security Standards
+
+Kubernetes provides security guidelines for Pods.
+
+Three levels:
+
+## Privileged
+
+Maximum permissions.
+
+Used for:
+
+* System workloads
+
+---
+
+## Baseline
+
+Common security restrictions.
+
+---
+
+## Restricted
+
+Highest security.
+
+Used for:
+
+* Sensitive applications
+
+---
+
+# 24. Running Containers as Non-Root
+
+Bad:
+
+```text
+Container
+
+↓
+
+root user
+```
+
+Risk:
+
+* Container escape impact
+
+---
+
+Better:
+
+```text
+Container
+
+↓
+
+Application User
+```
+
+Example:
+
+```yaml
+securityContext:
+
+ runAsNonRoot: true
+```
+
+---
+
+# 25. Linux Capabilities
+
+Containers have Linux privileges.
+
+Remove unnecessary capabilities.
+
+Example:
+
+```yaml
+securityContext:
+
+ capabilities:
+
+  drop:
+
+  - ALL
+```
+
+---
+
+# 26. Read-Only File System
+
+Prevent container modification.
+
+Example:
+
+```yaml
+securityContext:
+
+ readOnlyRootFilesystem: true
+```
+
+Benefits:
+
+* Reduces attacks
+* Prevents malware writes
+
+---
+
+# 27. Container Image Security
+
+Security starts before deployment.
+
+Pipeline:
+
+```text
+Developer
+
+↓
+
+Docker Image
+
+↓
+
+Security Scan
+
+↓
+
+Registry
+
+↓
+
+EKS Deployment
+```
+
+---
+
+# 28. Image Security Best Practices
+
+Use:
+
+* Trusted images
+* Minimal images
+* Updated packages
+* Image scanning
+* Signed images
+
+Avoid:
+
+* Unknown public images
+* Running outdated versions
+
+---
+
+# 29. Amazon ECR Image Scanning
+
+Amazon ECR supports vulnerability scanning.
+
+Flow:
+
+```text
+Docker Image
+
+↓
+
+Amazon ECR
+
+↓
+
+Security Scan
+
+↓
+
+Vulnerabilities Report
+```
+
+---
+
+# 30. Network Security
+
+Protect Pod communication.
+
+Layers:
+
+```text
+Internet
+
+↓
+
+Load Balancer Security Group
+
+↓
+
+Node Security Group
+
+↓
+
+Network Policy
+
+↓
+
+Pod
+```
+
+---
+
+# 31. Network Policies
+
+Control Pod traffic.
+
+Example:
+
+Allow:
+
+```text
+Frontend
+
+↓
+
+Backend
+```
+
+Deny:
+
+```text
+Frontend
+
+↓
+
+Database
+```
+
+---
+
+# 32. Security Groups for Pods
+
+EKS supports assigning security groups directly to Pods.
+
+Example:
+
+```text
+Pod
+
+↓
+
+Security Group
+
+↓
+
+AWS Network Rules
+```
+
+Useful for:
+
+* Sensitive workloads
+* Fine-grained access control
+
+---
+
+# 33. Audit Logging
+
+Audit logs show:
+
+* Who performed actions
+* What changed
+* When it happened
+
+Example:
+
+```text
+User
+
+Created Deployment
+
+At 10:30 AM
+```
+
+---
+
+# 34. EKS Control Plane Logs
+
+EKS supports logs:
+
+* API Server logs
+* Audit logs
+* Authenticator logs
+* Scheduler logs
+* Controller logs
+
+Send to:
+
+Amazon CloudWatch
+
+---
+
+# 35. Security Monitoring Tools
+
+Common tools:
+
+* Amazon GuardDuty
+* Amazon Inspector
+* CloudWatch
+* Falco
+* Trivy
+
+---
+
+# 36. Production EKS Security Architecture
+
+Example:
+
+```text
+                    Users
+
+                      |
+
+                  IAM Identity
+
+                      |
+
+                 EKS API Server
+
+                      |
+
+                    RBAC
+
+                      |
+
+              Kubernetes Resources
+
+                      |
+
+                    Pods
+
+                      |
+
+        ----------------------------
+
+        Network Policies
+
+        Security Groups
+
+        Encryption
+
+        Image Scanning
+
+        Monitoring
+
+        ----------------------------
+```
+
+---
+
+# 37. Common EKS Security Mistakes
+
+## Mistake 1
+
+Running containers as root.
+
+Solution:
+
+```text
+Use non-root users
+```
+
+---
+
+## Mistake 2
+
+Giving excessive IAM permissions.
+
+Solution:
+
+```text
+Least privilege access
+```
+
+---
+
+## Mistake 3
+
+Storing passwords in images.
+
+Solution:
+
+```text
+Use Secrets Manager
+```
+
+---
+
+## Mistake 4
+
+Allowing all network traffic.
+
+Solution:
+
+```text
+Use Network Policies
+```
+
+---
+
+## Mistake 5
+
+Using unverified images.
+
+Solution:
+
+```text
+Scan images
+```
+
+---
+
+# 38. Security Checklist for Production EKS
+
+✅ Enable IAM integration
+✅ Use RBAC
+✅ Use IRSA
+✅ Encrypt secrets
+✅ Encrypt storage
+✅ Scan images
+✅ Use private worker nodes
+✅ Apply Network Policies
+✅ Enable audit logging
+✅ Use least privilege IAM
+✅ Monitor cluster activity
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ EKS security model
+✅ IAM authentication
+✅ RBAC
+✅ Service Accounts
+✅ IRSA
+✅ Secrets management
+✅ Encryption
+✅ Pod Security Standards
+✅ Container security
+✅ Network security
+✅ Audit logging
+✅ Production security practices
+
+---
+
+# Hands-on Lab
+
+Practice:
+
+1. Create IAM user for Kubernetes access.
+2. Configure EKS RBAC.
+3. Create Service Account.
+4. Configure IRSA for S3 access.
+5. Store secrets securely.
+6. Enable EKS audit logs.
+7. Scan container images.
+8. Apply Network Policies.
+9. Deploy non-root containers.
+
+---
+
+# Next Chapter
+
+# Chapter 11 – EKS Deployment Strategies and CI/CD
+
+Topics:
+
+* Application deployment patterns
+* Rolling updates
+* Blue-Green deployments
+* Canary deployments
+* Helm
+* Helm charts
+* GitOps
+* Argo CD
+* Jenkins pipelines
+* GitHub Actions
+* AWS CodePipeline
+* Container image pipelines
+* Production deployment workflow
+
+This chapter covers how companies deploy applications automatically on EKS.
