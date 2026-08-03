@@ -1,0 +1,2904 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 15 – Real-World EKS Projects
+
+## Learning Objectives
+
+After completing this chapter, you will be able to:
+
+* Design real production-style EKS applications
+* Deploy 3-tier applications on EKS
+* Build microservices architectures
+* Create CI/CD pipelines
+* Implement GitOps with Argo CD
+* Add monitoring and logging
+* Apply security best practices
+* Build projects suitable for DevOps portfolios and interviews
+
+This chapter converts theory into practical EKS implementation skills.
+
+---
+
+# Project 1 – Deploy a 3-Tier Web Application on EKS
+
+## Architecture Overview
+
+A common enterprise application has three layers:
+
+1. Frontend
+2. Backend API
+3. Database
+
+Architecture:
+
+```text id="w3x8c2"
+                    Users
+
+                      |
+
+              Application Load Balancer
+
+                      |
+
+                  Frontend Pods
+
+                      |
+
+                  API Service
+
+                      |
+
+                  Backend Pods
+
+                      |
+
+                 Database Layer
+
+                      |
+
+              Amazon RDS / Storage
+```
+
+---
+
+# 1. Components Used
+
+## Frontend
+
+Technology examples:
+
+* React
+* Angular
+* Nginx
+
+Runs as:
+
+```text id="r8k4m1"
+Frontend Deployment
+
+        |
+
+        |
+
+Frontend Pods
+```
+
+---
+
+## Backend
+
+Examples:
+
+* Java Spring Boot
+* Node.js
+* Python Flask
+
+Runs as:
+
+```text id="t5n8q2"
+Backend Deployment
+
+        |
+
+        |
+
+API Pods
+```
+
+---
+
+## Database
+
+Production recommendation:
+
+Use managed database:
+
+* Amazon RDS
+* Amazon Aurora
+
+Instead of running databases inside Kubernetes.
+
+---
+
+# 2. Project Architecture
+
+```text id="f2m7k9"
+
+                    Internet
+
+                       |
+
+                  Route 53
+
+                       |
+
+                     ALB
+
+                       |
+
+                 Kubernetes Ingress
+
+                       |
+
+        --------------------------------
+
+        Frontend Service
+
+              |
+
+        Frontend Pods
+
+
+        Backend Service
+
+              |
+
+        Backend Pods
+
+
+        --------------------------------
+
+                    |
+
+                  RDS
+
+```
+
+---
+
+# 3. Kubernetes Resources Required
+
+Application requires:
+
+```text id="c9m2x5"
+
+Namespace
+
+|
+
+Deployments
+
+|
+
+Services
+
+|
+
+ConfigMaps
+
+|
+
+Secrets
+
+|
+
+Ingress
+
+|
+
+Horizontal Pod Autoscaler
+```
+
+---
+
+# 4. Create Namespace
+
+Example:
+
+```bash
+kubectl create namespace ecommerce
+```
+
+Verify:
+
+```bash
+kubectl get namespaces
+```
+
+---
+
+# 5. Frontend Deployment
+
+Example:
+
+```yaml
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+
+ name: frontend
+
+
+spec:
+
+ replicas: 3
+
+
+ selector:
+
+  matchLabels:
+
+   app: frontend
+
+
+ template:
+
+  metadata:
+
+   labels:
+
+    app: frontend
+
+
+  spec:
+
+   containers:
+
+   - name: frontend
+
+     image: nginx
+```
+
+---
+
+# 6. Frontend Service
+
+```yaml
+apiVersion: v1
+
+kind: Service
+
+metadata:
+
+ name: frontend-service
+
+
+spec:
+
+ selector:
+
+  app: frontend
+
+
+ ports:
+
+ - port: 80
+
+   targetPort: 80
+```
+
+---
+
+# 7. Backend Deployment
+
+Architecture:
+
+```text id="p6s8w1"
+Backend Deployment
+
+        |
+
+        |
+
+Backend Pods
+
+        |
+
+        |
+
+API Service
+```
+
+Example:
+
+```yaml
+kind: Deployment
+
+metadata:
+
+ name: backend
+
+
+spec:
+
+ replicas: 3
+```
+
+---
+
+# 8. Configuration Management
+
+Applications need configuration.
+
+Example:
+
+Database URL:
+
+```text id="n7q2x4"
+DATABASE_HOST=rds.example.com
+```
+
+Use ConfigMap:
+
+```bash
+kubectl create configmap app-config
+```
+
+---
+
+# 9. Secrets
+
+Sensitive information:
+
+* Passwords
+* API keys
+* Tokens
+
+Use:
+
+* Kubernetes Secrets
+* AWS Secrets Manager
+
+Example:
+
+```text id="k8m3z6"
+Application
+
+      |
+
+Secret
+
+      |
+
+Database Password
+```
+
+---
+
+# 10. Ingress Configuration
+
+Traffic flow:
+
+```text id="v4m9k1"
+
+User
+
+ |
+
+ALB
+
+ |
+
+Ingress
+
+ |
+
+Service
+
+ |
+
+Pod
+```
+
+Example:
+
+```yaml
+kind: Ingress
+
+metadata:
+
+ name: app-ingress
+```
+
+---
+
+# 11. Application Scaling
+
+Use Horizontal Pod Autoscaler.
+
+Example:
+
+```text id="q2w8m7"
+Low Traffic
+
+3 Pods
+
+
+High Traffic
+
+10 Pods
+```
+
+Command:
+
+```bash
+kubectl autoscale deployment frontend \
+--min=3 \
+--max=10 \
+--cpu-percent=70
+```
+
+---
+
+# Project 2 – Microservices Application on EKS
+
+## Architecture
+
+Large applications are split into smaller services.
+
+Example:
+
+```text id="s8k2m4"
+
+                 User
+
+                  |
+
+              API Gateway
+
+                  |
+
+ ---------------------------------
+
+ |        |        |        |
+
+User   Order   Payment   Product
+
+Service Service Service Service
+
+ ---------------------------------
+
+                  |
+
+               Database
+```
+
+---
+
+# 1. Microservices Benefits
+
+Advantages:
+
+* Independent scaling
+* Independent deployment
+* Better fault isolation
+
+---
+
+# 2. Kubernetes Design
+
+Each service has:
+
+```text id="h6m9p2"
+
+Deployment
+
+Service
+
+ConfigMap
+
+Secret
+
+HPA
+```
+
+Example:
+
+```text
+user-service
+
+order-service
+
+payment-service
+```
+
+---
+
+# 3. Service Communication
+
+Internal communication:
+
+```text id="e3k7q1"
+
+Order Service
+
+        |
+
+order-service.default.svc.cluster.local
+
+        |
+
+Database
+```
+
+---
+
+# Project 3 – CI/CD Pipeline for EKS
+
+## Complete Workflow
+
+```text id="z5m8k2"
+
+Developer
+
+   |
+
+Git Push
+
+   |
+
+CI Pipeline
+
+   |
+
+Build Docker Image
+
+   |
+
+Security Scan
+
+   |
+
+Push to Amazon ECR
+
+   |
+
+Deploy Helm Chart
+
+   |
+
+EKS Cluster
+
+   |
+
+Application Running
+```
+
+---
+
+# 1. Docker Build Stage
+
+Example:
+
+```bash
+docker build -t app:v1 .
+```
+
+---
+
+# 2. Push Image to Registry
+
+Example:
+
+```bash
+docker push image
+```
+
+Production registry:
+
+* Amazon ECR
+
+---
+
+# 3. Deployment Using Helm
+
+Structure:
+
+```text id="x7m2p9"
+
+app-chart/
+
+├── Chart.yaml
+
+├── values.yaml
+
+└── templates/
+
+    ├── deployment.yaml
+
+    ├── service.yaml
+
+    └── ingress.yaml
+```
+
+---
+
+# Project 4 – GitOps with Argo CD
+
+## Architecture
+
+```text id="b8q5n3"
+
+Developer
+
+    |
+
+Git Repository
+
+    |
+
+Argo CD
+
+    |
+
+EKS Cluster
+
+    |
+
+Applications
+```
+
+---
+
+# 1. Git Repository Structure
+
+Example:
+
+```text
+eks-manifests/
+
+├── applications/
+
+│
+├── frontend/
+
+│
+├── backend/
+
+└── monitoring/
+```
+
+---
+
+# 2. GitOps Workflow
+
+Developer changes:
+
+```yaml
+replicas: 5
+```
+
+Push:
+
+```bash
+git push
+```
+
+Argo CD:
+
+```text id="j9m4s6"
+
+Detect Change
+
+      |
+
+Sync Cluster
+
+      |
+
+Update Pods
+```
+
+---
+
+# Project 5 – Monitoring Stack
+
+Production monitoring:
+
+```text id="n3k7m2"
+
+Applications
+
+      |
+
+Metrics
+
+      |
+
+Prometheus
+
+      |
+
+Grafana
+
+      |
+
+Dashboards
+```
+
+---
+
+# 1. Monitor These Metrics
+
+## Cluster
+
+* Node CPU
+* Memory
+* Disk
+
+## Kubernetes
+
+* Pod restarts
+* Deployment failures
+* Scheduling problems
+
+## Application
+
+* Request rate
+* Latency
+* Errors
+
+---
+
+# Project 6 – Security Hardening
+
+## Security Architecture
+
+```text id="r6m2q8"
+
+Internet
+
+ |
+
+WAF
+
+ |
+
+ALB
+
+ |
+
+Security Groups
+
+ |
+
+Network Policies
+
+ |
+
+Pods
+
+```
+
+---
+
+# Security Tasks
+
+Implement:
+
+✅ IAM Roles for Service Accounts
+✅ RBAC
+✅ Private Nodes
+✅ Image Scanning
+✅ Secrets Management
+✅ Encryption
+✅ Network Policies
+
+---
+
+# Project 7 – Production EKS Platform
+
+Complete enterprise design:
+
+```text id="k8p3m5"
+
+                 Users
+
+                   |
+
+                Route 53
+
+                   |
+
+                   WAF
+
+                   |
+
+                  ALB
+
+                   |
+
+                Ingress
+
+                   |
+
+             Kubernetes Services
+
+                   |
+
+        --------------------------
+
+        EKS Cluster
+
+
+        Node Groups
+
+        Karpenter Nodes
+
+        Spot Nodes
+
+
+        --------------------------
+
+
+        Monitoring
+
+        Prometheus
+
+        Grafana
+
+        CloudWatch
+
+
+        Security
+
+        IAM
+
+        RBAC
+
+
+        Backup
+
+        Velero
+
+        S3
+
+```
+
+---
+
+# Portfolio Project Checklist
+
+A strong EKS project should include:
+
+## Infrastructure
+
+✅ Terraform VPC
+✅ EKS Cluster
+✅ Node Groups
+✅ IAM Configuration
+
+---
+
+## Kubernetes
+
+✅ Deployments
+✅ Services
+✅ Ingress
+✅ ConfigMaps
+✅ Secrets
+✅ HPA
+
+---
+
+## DevOps
+
+✅ Docker
+✅ CI/CD
+✅ Helm
+✅ GitOps
+
+---
+
+## Operations
+
+✅ Monitoring
+✅ Logging
+✅ Alerts
+✅ Backup
+
+---
+
+# Interview Project Explanation Example
+
+"I designed and deployed a production-style microservices application on Amazon EKS. I created the VPC using Terraform, configured private worker nodes, deployed applications using Helm, automated deployments through GitOps with Argo CD, implemented monitoring using Prometheus and Grafana, and secured workloads using IAM roles, RBAC, and network policies."
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ 3-tier application deployment
+✅ Microservices architecture
+✅ CI/CD pipeline design
+✅ Helm deployment
+✅ GitOps workflow
+✅ Argo CD usage
+✅ Monitoring implementation
+✅ Security hardening
+✅ Enterprise EKS project architecture
+
+---
+
+# Hands-on Final Project
+
+Build this complete environment:
+
+1. Create AWS VPC using Terraform.
+2. Create EKS cluster.
+3. Configure IAM and security.
+4. Deploy frontend application.
+5. Deploy backend API.
+6. Connect database.
+7. Add ALB Ingress.
+8. Create Helm charts.
+9. Configure GitHub Actions.
+10. Deploy using Argo CD.
+11. Add Prometheus and Grafana.
+12. Configure alerts.
+13. Perform application upgrade.
+14. Test rollback.
+
+---
+
+# Next Chapter
+
+# Chapter 16 – EKS Interview Preparation
+
+Topics:
+
+* 100+ EKS interview questions
+* Kubernetes troubleshooting scenarios
+* AWS architecture questions
+* Production incident scenarios
+* Senior DevOps interview preparation
+* Hands-on interview tasks
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 15 – Real-World EKS Projects
+
+## Learning Objectives
+
+After completing this chapter, you will be able to:
+
+* Design real production-style EKS applications
+* Deploy 3-tier applications on EKS
+* Build microservices architectures
+* Create CI/CD pipelines
+* Implement GitOps with Argo CD
+* Add monitoring and logging
+* Apply security best practices
+* Build projects suitable for DevOps portfolios and interviews
+
+This chapter converts theory into practical EKS implementation skills.
+
+---
+
+# Project 1 – Deploy a 3-Tier Web Application on EKS
+
+## Architecture Overview
+
+A common enterprise application has three layers:
+
+1. Frontend
+2. Backend API
+3. Database
+
+Architecture:
+
+```text id="w3x8c2"
+                    Users
+
+                      |
+
+              Application Load Balancer
+
+                      |
+
+                  Frontend Pods
+
+                      |
+
+                  API Service
+
+                      |
+
+                  Backend Pods
+
+                      |
+
+                 Database Layer
+
+                      |
+
+              Amazon RDS / Storage
+```
+
+---
+
+# 1. Components Used
+
+## Frontend
+
+Technology examples:
+
+* React
+* Angular
+* Nginx
+
+Runs as:
+
+```text id="r8k4m1"
+Frontend Deployment
+
+        |
+
+        |
+
+Frontend Pods
+```
+
+---
+
+## Backend
+
+Examples:
+
+* Java Spring Boot
+* Node.js
+* Python Flask
+
+Runs as:
+
+```text id="t5n8q2"
+Backend Deployment
+
+        |
+
+        |
+
+API Pods
+```
+
+---
+
+## Database
+
+Production recommendation:
+
+Use managed database:
+
+* Amazon RDS
+* Amazon Aurora
+
+Instead of running databases inside Kubernetes.
+
+---
+
+# 2. Project Architecture
+
+```text id="f2m7k9"
+
+                    Internet
+
+                       |
+
+                  Route 53
+
+                       |
+
+                     ALB
+
+                       |
+
+                 Kubernetes Ingress
+
+                       |
+
+        --------------------------------
+
+        Frontend Service
+
+              |
+
+        Frontend Pods
+
+
+        Backend Service
+
+              |
+
+        Backend Pods
+
+
+        --------------------------------
+
+                    |
+
+                  RDS
+
+```
+
+---
+
+# 3. Kubernetes Resources Required
+
+Application requires:
+
+```text id="c9m2x5"
+
+Namespace
+
+|
+
+Deployments
+
+|
+
+Services
+
+|
+
+ConfigMaps
+
+|
+
+Secrets
+
+|
+
+Ingress
+
+|
+
+Horizontal Pod Autoscaler
+```
+
+---
+
+# 4. Create Namespace
+
+Example:
+
+```bash
+kubectl create namespace ecommerce
+```
+
+Verify:
+
+```bash
+kubectl get namespaces
+```
+
+---
+
+# 5. Frontend Deployment
+
+Example:
+
+```yaml
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+
+ name: frontend
+
+
+spec:
+
+ replicas: 3
+
+
+ selector:
+
+  matchLabels:
+
+   app: frontend
+
+
+ template:
+
+  metadata:
+
+   labels:
+
+    app: frontend
+
+
+  spec:
+
+   containers:
+
+   - name: frontend
+
+     image: nginx
+```
+
+---
+
+# 6. Frontend Service
+
+```yaml
+apiVersion: v1
+
+kind: Service
+
+metadata:
+
+ name: frontend-service
+
+
+spec:
+
+ selector:
+
+  app: frontend
+
+
+ ports:
+
+ - port: 80
+
+   targetPort: 80
+```
+
+---
+
+# 7. Backend Deployment
+
+Architecture:
+
+```text id="p6s8w1"
+Backend Deployment
+
+        |
+
+        |
+
+Backend Pods
+
+        |
+
+        |
+
+API Service
+```
+
+Example:
+
+```yaml
+kind: Deployment
+
+metadata:
+
+ name: backend
+
+
+spec:
+
+ replicas: 3
+```
+
+---
+
+# 8. Configuration Management
+
+Applications need configuration.
+
+Example:
+
+Database URL:
+
+```text id="n7q2x4"
+DATABASE_HOST=rds.example.com
+```
+
+Use ConfigMap:
+
+```bash
+kubectl create configmap app-config
+```
+
+---
+
+# 9. Secrets
+
+Sensitive information:
+
+* Passwords
+* API keys
+* Tokens
+
+Use:
+
+* Kubernetes Secrets
+* AWS Secrets Manager
+
+Example:
+
+```text id="k8m3z6"
+Application
+
+      |
+
+Secret
+
+      |
+
+Database Password
+```
+
+---
+
+# 10. Ingress Configuration
+
+Traffic flow:
+
+```text id="v4m9k1"
+
+User
+
+ |
+
+ALB
+
+ |
+
+Ingress
+
+ |
+
+Service
+
+ |
+
+Pod
+```
+
+Example:
+
+```yaml
+kind: Ingress
+
+metadata:
+
+ name: app-ingress
+```
+
+---
+
+# 11. Application Scaling
+
+Use Horizontal Pod Autoscaler.
+
+Example:
+
+```text id="q2w8m7"
+Low Traffic
+
+3 Pods
+
+
+High Traffic
+
+10 Pods
+```
+
+Command:
+
+```bash
+kubectl autoscale deployment frontend \
+--min=3 \
+--max=10 \
+--cpu-percent=70
+```
+
+---
+
+# Project 2 – Microservices Application on EKS
+
+## Architecture
+
+Large applications are split into smaller services.
+
+Example:
+
+```text id="s8k2m4"
+
+                 User
+
+                  |
+
+              API Gateway
+
+                  |
+
+ ---------------------------------
+
+ |        |        |        |
+
+User   Order   Payment   Product
+
+Service Service Service Service
+
+ ---------------------------------
+
+                  |
+
+               Database
+```
+
+---
+
+# 1. Microservices Benefits
+
+Advantages:
+
+* Independent scaling
+* Independent deployment
+* Better fault isolation
+
+---
+
+# 2. Kubernetes Design
+
+Each service has:
+
+```text id="h6m9p2"
+
+Deployment
+
+Service
+
+ConfigMap
+
+Secret
+
+HPA
+```
+
+Example:
+
+```text
+user-service
+
+order-service
+
+payment-service
+```
+
+---
+
+# 3. Service Communication
+
+Internal communication:
+
+```text id="e3k7q1"
+
+Order Service
+
+        |
+
+order-service.default.svc.cluster.local
+
+        |
+
+Database
+```
+
+---
+
+# Project 3 – CI/CD Pipeline for EKS
+
+## Complete Workflow
+
+```text id="z5m8k2"
+
+Developer
+
+   |
+
+Git Push
+
+   |
+
+CI Pipeline
+
+   |
+
+Build Docker Image
+
+   |
+
+Security Scan
+
+   |
+
+Push to Amazon ECR
+
+   |
+
+Deploy Helm Chart
+
+   |
+
+EKS Cluster
+
+   |
+
+Application Running
+```
+
+---
+
+# 1. Docker Build Stage
+
+Example:
+
+```bash
+docker build -t app:v1 .
+```
+
+---
+
+# 2. Push Image to Registry
+
+Example:
+
+```bash
+docker push image
+```
+
+Production registry:
+
+* Amazon ECR
+
+---
+
+# 3. Deployment Using Helm
+
+Structure:
+
+```text id="x7m2p9"
+
+app-chart/
+
+├── Chart.yaml
+
+├── values.yaml
+
+└── templates/
+
+    ├── deployment.yaml
+
+    ├── service.yaml
+
+    └── ingress.yaml
+```
+
+---
+
+# Project 4 – GitOps with Argo CD
+
+## Architecture
+
+```text id="b8q5n3"
+
+Developer
+
+    |
+
+Git Repository
+
+    |
+
+Argo CD
+
+    |
+
+EKS Cluster
+
+    |
+
+Applications
+```
+
+---
+
+# 1. Git Repository Structure
+
+Example:
+
+```text
+eks-manifests/
+
+├── applications/
+
+│
+├── frontend/
+
+│
+├── backend/
+
+└── monitoring/
+```
+
+---
+
+# 2. GitOps Workflow
+
+Developer changes:
+
+```yaml
+replicas: 5
+```
+
+Push:
+
+```bash
+git push
+```
+
+Argo CD:
+
+```text id="j9m4s6"
+
+Detect Change
+
+      |
+
+Sync Cluster
+
+      |
+
+Update Pods
+```
+
+---
+
+# Project 5 – Monitoring Stack
+
+Production monitoring:
+
+```text id="n3k7m2"
+
+Applications
+
+      |
+
+Metrics
+
+      |
+
+Prometheus
+
+      |
+
+Grafana
+
+      |
+
+Dashboards
+```
+
+---
+
+# 1. Monitor These Metrics
+
+## Cluster
+
+* Node CPU
+* Memory
+* Disk
+
+## Kubernetes
+
+* Pod restarts
+* Deployment failures
+* Scheduling problems
+
+## Application
+
+* Request rate
+* Latency
+* Errors
+
+---
+
+# Project 6 – Security Hardening
+
+## Security Architecture
+
+```text id="r6m2q8"
+
+Internet
+
+ |
+
+WAF
+
+ |
+
+ALB
+
+ |
+
+Security Groups
+
+ |
+
+Network Policies
+
+ |
+
+Pods
+
+```
+
+---
+
+# Security Tasks
+
+Implement:
+
+✅ IAM Roles for Service Accounts
+✅ RBAC
+✅ Private Nodes
+✅ Image Scanning
+✅ Secrets Management
+✅ Encryption
+✅ Network Policies
+
+---
+
+# Project 7 – Production EKS Platform
+
+Complete enterprise design:
+
+```text id="k8p3m5"
+
+                 Users
+
+                   |
+
+                Route 53
+
+                   |
+
+                   WAF
+
+                   |
+
+                  ALB
+
+                   |
+
+                Ingress
+
+                   |
+
+             Kubernetes Services
+
+                   |
+
+        --------------------------
+
+        EKS Cluster
+
+
+        Node Groups
+
+        Karpenter Nodes
+
+        Spot Nodes
+
+
+        --------------------------
+
+
+        Monitoring
+
+        Prometheus
+
+        Grafana
+
+        CloudWatch
+
+
+        Security
+
+        IAM
+
+        RBAC
+
+
+        Backup
+
+        Velero
+
+        S3
+
+```
+
+---
+
+# Portfolio Project Checklist
+
+A strong EKS project should include:
+
+## Infrastructure
+
+✅ Terraform VPC
+✅ EKS Cluster
+✅ Node Groups
+✅ IAM Configuration
+
+---
+
+## Kubernetes
+
+✅ Deployments
+✅ Services
+✅ Ingress
+✅ ConfigMaps
+✅ Secrets
+✅ HPA
+
+---
+
+## DevOps
+
+✅ Docker
+✅ CI/CD
+✅ Helm
+✅ GitOps
+
+---
+
+## Operations
+
+✅ Monitoring
+✅ Logging
+✅ Alerts
+✅ Backup
+
+---
+
+# Interview Project Explanation Example
+
+"I designed and deployed a production-style microservices application on Amazon EKS. I created the VPC using Terraform, configured private worker nodes, deployed applications using Helm, automated deployments through GitOps with Argo CD, implemented monitoring using Prometheus and Grafana, and secured workloads using IAM roles, RBAC, and network policies."
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ 3-tier application deployment
+✅ Microservices architecture
+✅ CI/CD pipeline design
+✅ Helm deployment
+✅ GitOps workflow
+✅ Argo CD usage
+✅ Monitoring implementation
+✅ Security hardening
+✅ Enterprise EKS project architecture
+
+---
+
+# Hands-on Final Project
+
+Build this complete environment:
+
+1. Create AWS VPC using Terraform.
+2. Create EKS cluster.
+3. Configure IAM and security.
+4. Deploy frontend application.
+5. Deploy backend API.
+6. Connect database.
+7. Add ALB Ingress.
+8. Create Helm charts.
+9. Configure GitHub Actions.
+10. Deploy using Argo CD.
+11. Add Prometheus and Grafana.
+12. Configure alerts.
+13. Perform application upgrade.
+14. Test rollback.
+
+---
+
+# Next Chapter
+
+# Chapter 16 – EKS Interview Preparation
+
+Topics:
+
+* 100+ EKS interview questions
+* Kubernetes troubleshooting scenarios
+* AWS architecture questions
+* Production incident scenarios
+* Senior DevOps interview preparation
+* Hands-on interview tasks
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 15 – Real-World EKS Projects
+
+## Learning Objectives
+
+After completing this chapter, you will be able to:
+
+* Design real production-style EKS applications
+* Deploy 3-tier applications on EKS
+* Build microservices architectures
+* Create CI/CD pipelines
+* Implement GitOps with Argo CD
+* Add monitoring and logging
+* Apply security best practices
+* Build projects suitable for DevOps portfolios and interviews
+
+This chapter converts theory into practical EKS implementation skills.
+
+---
+
+# Project 1 – Deploy a 3-Tier Web Application on EKS
+
+## Architecture Overview
+
+A common enterprise application has three layers:
+
+1. Frontend
+2. Backend API
+3. Database
+
+Architecture:
+
+```text id="w3x8c2"
+                    Users
+
+                      |
+
+              Application Load Balancer
+
+                      |
+
+                  Frontend Pods
+
+                      |
+
+                  API Service
+
+                      |
+
+                  Backend Pods
+
+                      |
+
+                 Database Layer
+
+                      |
+
+              Amazon RDS / Storage
+```
+
+---
+
+# 1. Components Used
+
+## Frontend
+
+Technology examples:
+
+* React
+* Angular
+* Nginx
+
+Runs as:
+
+```text id="r8k4m1"
+Frontend Deployment
+
+        |
+
+        |
+
+Frontend Pods
+```
+
+---
+
+## Backend
+
+Examples:
+
+* Java Spring Boot
+* Node.js
+* Python Flask
+
+Runs as:
+
+```text id="t5n8q2"
+Backend Deployment
+
+        |
+
+        |
+
+API Pods
+```
+
+---
+
+## Database
+
+Production recommendation:
+
+Use managed database:
+
+* Amazon RDS
+* Amazon Aurora
+
+Instead of running databases inside Kubernetes.
+
+---
+
+# 2. Project Architecture
+
+```text id="f2m7k9"
+
+                    Internet
+
+                       |
+
+                  Route 53
+
+                       |
+
+                     ALB
+
+                       |
+
+                 Kubernetes Ingress
+
+                       |
+
+        --------------------------------
+
+        Frontend Service
+
+              |
+
+        Frontend Pods
+
+
+        Backend Service
+
+              |
+
+        Backend Pods
+
+
+        --------------------------------
+
+                    |
+
+                  RDS
+
+```
+
+---
+
+# 3. Kubernetes Resources Required
+
+Application requires:
+
+```text id="c9m2x5"
+
+Namespace
+
+|
+
+Deployments
+
+|
+
+Services
+
+|
+
+ConfigMaps
+
+|
+
+Secrets
+
+|
+
+Ingress
+
+|
+
+Horizontal Pod Autoscaler
+```
+
+---
+
+# 4. Create Namespace
+
+Example:
+
+```bash
+kubectl create namespace ecommerce
+```
+
+Verify:
+
+```bash
+kubectl get namespaces
+```
+
+---
+
+# 5. Frontend Deployment
+
+Example:
+
+```yaml
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+
+ name: frontend
+
+
+spec:
+
+ replicas: 3
+
+
+ selector:
+
+  matchLabels:
+
+   app: frontend
+
+
+ template:
+
+  metadata:
+
+   labels:
+
+    app: frontend
+
+
+  spec:
+
+   containers:
+
+   - name: frontend
+
+     image: nginx
+```
+
+---
+
+# 6. Frontend Service
+
+```yaml
+apiVersion: v1
+
+kind: Service
+
+metadata:
+
+ name: frontend-service
+
+
+spec:
+
+ selector:
+
+  app: frontend
+
+
+ ports:
+
+ - port: 80
+
+   targetPort: 80
+```
+
+---
+
+# 7. Backend Deployment
+
+Architecture:
+
+```text id="p6s8w1"
+Backend Deployment
+
+        |
+
+        |
+
+Backend Pods
+
+        |
+
+        |
+
+API Service
+```
+
+Example:
+
+```yaml
+kind: Deployment
+
+metadata:
+
+ name: backend
+
+
+spec:
+
+ replicas: 3
+```
+
+---
+
+# 8. Configuration Management
+
+Applications need configuration.
+
+Example:
+
+Database URL:
+
+```text id="n7q2x4"
+DATABASE_HOST=rds.example.com
+```
+
+Use ConfigMap:
+
+```bash
+kubectl create configmap app-config
+```
+
+---
+
+# 9. Secrets
+
+Sensitive information:
+
+* Passwords
+* API keys
+* Tokens
+
+Use:
+
+* Kubernetes Secrets
+* AWS Secrets Manager
+
+Example:
+
+```text id="k8m3z6"
+Application
+
+      |
+
+Secret
+
+      |
+
+Database Password
+```
+
+---
+
+# 10. Ingress Configuration
+
+Traffic flow:
+
+```text id="v4m9k1"
+
+User
+
+ |
+
+ALB
+
+ |
+
+Ingress
+
+ |
+
+Service
+
+ |
+
+Pod
+```
+
+Example:
+
+```yaml
+kind: Ingress
+
+metadata:
+
+ name: app-ingress
+```
+
+---
+
+# 11. Application Scaling
+
+Use Horizontal Pod Autoscaler.
+
+Example:
+
+```text id="q2w8m7"
+Low Traffic
+
+3 Pods
+
+
+High Traffic
+
+10 Pods
+```
+
+Command:
+
+```bash
+kubectl autoscale deployment frontend \
+--min=3 \
+--max=10 \
+--cpu-percent=70
+```
+
+---
+
+# Project 2 – Microservices Application on EKS
+
+## Architecture
+
+Large applications are split into smaller services.
+
+Example:
+
+```text id="s8k2m4"
+
+                 User
+
+                  |
+
+              API Gateway
+
+                  |
+
+ ---------------------------------
+
+ |        |        |        |
+
+User   Order   Payment   Product
+
+Service Service Service Service
+
+ ---------------------------------
+
+                  |
+
+               Database
+```
+
+---
+
+# 1. Microservices Benefits
+
+Advantages:
+
+* Independent scaling
+* Independent deployment
+* Better fault isolation
+
+---
+
+# 2. Kubernetes Design
+
+Each service has:
+
+```text id="h6m9p2"
+
+Deployment
+
+Service
+
+ConfigMap
+
+Secret
+
+HPA
+```
+
+Example:
+
+```text
+user-service
+
+order-service
+
+payment-service
+```
+
+---
+
+# 3. Service Communication
+
+Internal communication:
+
+```text id="e3k7q1"
+
+Order Service
+
+        |
+
+order-service.default.svc.cluster.local
+
+        |
+
+Database
+```
+
+---
+
+# Project 3 – CI/CD Pipeline for EKS
+
+## Complete Workflow
+
+```text id="z5m8k2"
+
+Developer
+
+   |
+
+Git Push
+
+   |
+
+CI Pipeline
+
+   |
+
+Build Docker Image
+
+   |
+
+Security Scan
+
+   |
+
+Push to Amazon ECR
+
+   |
+
+Deploy Helm Chart
+
+   |
+
+EKS Cluster
+
+   |
+
+Application Running
+```
+
+---
+
+# 1. Docker Build Stage
+
+Example:
+
+```bash
+docker build -t app:v1 .
+```
+
+---
+
+# 2. Push Image to Registry
+
+Example:
+
+```bash
+docker push image
+```
+
+Production registry:
+
+* Amazon ECR
+
+---
+
+# 3. Deployment Using Helm
+
+Structure:
+
+```text id="x7m2p9"
+
+app-chart/
+
+├── Chart.yaml
+
+├── values.yaml
+
+└── templates/
+
+    ├── deployment.yaml
+
+    ├── service.yaml
+
+    └── ingress.yaml
+```
+
+---
+
+# Project 4 – GitOps with Argo CD
+
+## Architecture
+
+```text id="b8q5n3"
+
+Developer
+
+    |
+
+Git Repository
+
+    |
+
+Argo CD
+
+    |
+
+EKS Cluster
+
+    |
+
+Applications
+```
+
+---
+
+# 1. Git Repository Structure
+
+Example:
+
+```text
+eks-manifests/
+
+├── applications/
+
+│
+├── frontend/
+
+│
+├── backend/
+
+└── monitoring/
+```
+
+---
+
+# 2. GitOps Workflow
+
+Developer changes:
+
+```yaml
+replicas: 5
+```
+
+Push:
+
+```bash
+git push
+```
+
+Argo CD:
+
+```text id="j9m4s6"
+
+Detect Change
+
+      |
+
+Sync Cluster
+
+      |
+
+Update Pods
+```
+
+---
+
+# Project 5 – Monitoring Stack
+
+Production monitoring:
+
+```text id="n3k7m2"
+
+Applications
+
+      |
+
+Metrics
+
+      |
+
+Prometheus
+
+      |
+
+Grafana
+
+      |
+
+Dashboards
+```
+
+---
+
+# 1. Monitor These Metrics
+
+## Cluster
+
+* Node CPU
+* Memory
+* Disk
+
+## Kubernetes
+
+* Pod restarts
+* Deployment failures
+* Scheduling problems
+
+## Application
+
+* Request rate
+* Latency
+* Errors
+
+---
+
+# Project 6 – Security Hardening
+
+## Security Architecture
+
+```text id="r6m2q8"
+
+Internet
+
+ |
+
+WAF
+
+ |
+
+ALB
+
+ |
+
+Security Groups
+
+ |
+
+Network Policies
+
+ |
+
+Pods
+
+```
+
+---
+
+# Security Tasks
+
+Implement:
+
+✅ IAM Roles for Service Accounts
+✅ RBAC
+✅ Private Nodes
+✅ Image Scanning
+✅ Secrets Management
+✅ Encryption
+✅ Network Policies
+
+---
+
+# Project 7 – Production EKS Platform
+
+Complete enterprise design:
+
+```text id="k8p3m5"
+
+                 Users
+
+                   |
+
+                Route 53
+
+                   |
+
+                   WAF
+
+                   |
+
+                  ALB
+
+                   |
+
+                Ingress
+
+                   |
+
+             Kubernetes Services
+
+                   |
+
+        --------------------------
+
+        EKS Cluster
+
+
+        Node Groups
+
+        Karpenter Nodes
+
+        Spot Nodes
+
+
+        --------------------------
+
+
+        Monitoring
+
+        Prometheus
+
+        Grafana
+
+        CloudWatch
+
+
+        Security
+
+        IAM
+
+        RBAC
+
+
+        Backup
+
+        Velero
+
+        S3
+
+```
+
+---
+
+# Portfolio Project Checklist
+
+A strong EKS project should include:
+
+## Infrastructure
+
+✅ Terraform VPC
+✅ EKS Cluster
+✅ Node Groups
+✅ IAM Configuration
+
+---
+
+## Kubernetes
+
+✅ Deployments
+✅ Services
+✅ Ingress
+✅ ConfigMaps
+✅ Secrets
+✅ HPA
+
+---
+
+## DevOps
+
+✅ Docker
+✅ CI/CD
+✅ Helm
+✅ GitOps
+
+---
+
+## Operations
+
+✅ Monitoring
+✅ Logging
+✅ Alerts
+✅ Backup
+
+---
+
+# Interview Project Explanation Example
+
+"I designed and deployed a production-style microservices application on Amazon EKS. I created the VPC using Terraform, configured private worker nodes, deployed applications using Helm, automated deployments through GitOps with Argo CD, implemented monitoring using Prometheus and Grafana, and secured workloads using IAM roles, RBAC, and network policies."
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ 3-tier application deployment
+✅ Microservices architecture
+✅ CI/CD pipeline design
+✅ Helm deployment
+✅ GitOps workflow
+✅ Argo CD usage
+✅ Monitoring implementation
+✅ Security hardening
+✅ Enterprise EKS project architecture
+
+---
+
+# Hands-on Final Project
+
+Build this complete environment:
+
+1. Create AWS VPC using Terraform.
+2. Create EKS cluster.
+3. Configure IAM and security.
+4. Deploy frontend application.
+5. Deploy backend API.
+6. Connect database.
+7. Add ALB Ingress.
+8. Create Helm charts.
+9. Configure GitHub Actions.
+10. Deploy using Argo CD.
+11. Add Prometheus and Grafana.
+12. Configure alerts.
+13. Perform application upgrade.
+14. Test rollback.
+
+---
+
+# Next Chapter
+
+# Chapter 16 – EKS Interview Preparation
+
+Topics:
+
+* 100+ EKS interview questions
+* Kubernetes troubleshooting scenarios
+* AWS architecture questions
+* Production incident scenarios
+* Senior DevOps interview preparation
+* Hands-on interview tasks
