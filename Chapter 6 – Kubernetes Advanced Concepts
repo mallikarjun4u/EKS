@@ -1,0 +1,1111 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 6 – Kubernetes Advanced Concepts
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* ConfigMaps
+* Secrets
+* Environment variables
+* Kubernetes storage concepts
+* Volumes
+* Persistent Volumes (PV)
+* Persistent Volume Claims (PVC)
+* Storage Classes
+* StatefulSets
+* DaemonSets
+* Jobs
+* CronJobs
+* Ingress
+* Network Policies
+* Resource Requests and Limits
+* Health Probes
+* Taints and Tolerations
+* Affinity and Scheduling
+
+These concepts are required for running production workloads on Amazon EKS.
+
+---
+
+# 1. Kubernetes Configuration Management
+
+Applications need configuration.
+
+Examples:
+
+* Database URL
+* API endpoints
+* Application settings
+* Environment variables
+
+Bad approach:
+
+```text
+Application Code
+
++
+
+Configuration
+
++
+
+Passwords
+```
+
+Everything is inside the container image.
+
+Problems:
+
+* Hard to change
+* Security risk
+* Requires rebuilding images
+
+Kubernetes provides:
+
+* ConfigMaps
+* Secrets
+
+---
+
+# 2. ConfigMap
+
+A ConfigMap stores non-sensitive configuration data.
+
+Examples:
+
+* Application settings
+* URLs
+* Feature flags
+* Environment values
+
+Architecture:
+
+```text
+ConfigMap
+
+        |
+        |
+        v
+
+      Pod
+
+        |
+        |
+        v
+
+ Application
+```
+
+---
+
+## Creating a ConfigMap
+
+Example:
+
+```yaml
+apiVersion: v1
+
+kind: ConfigMap
+
+metadata:
+  name: app-config
+
+data:
+
+  APP_ENV: production
+
+  DATABASE_HOST: mysql.example.com
+```
+
+Create:
+
+```bash
+kubectl apply -f configmap.yaml
+```
+
+Check:
+
+```bash
+kubectl get configmap
+```
+
+---
+
+# 3. Using ConfigMap in Pod
+
+Example:
+
+```yaml
+apiVersion: v1
+
+kind: Pod
+
+metadata:
+  name: app
+
+spec:
+
+  containers:
+
+  - name: application
+
+    image: nginx
+
+    env:
+
+    - name: DATABASE_HOST
+
+      valueFrom:
+
+        configMapKeyRef:
+
+          name: app-config
+
+          key: DATABASE_HOST
+```
+
+Now the container receives:
+
+```text
+DATABASE_HOST=mysql.example.com
+```
+
+---
+
+# 4. Secrets
+
+Secrets store sensitive information.
+
+Examples:
+
+* Passwords
+* Tokens
+* API keys
+* Certificates
+
+Architecture:
+
+```text
+Secret
+
+   |
+
+   |
+
+ Pod
+
+   |
+
+ Application
+```
+
+---
+
+## Creating a Secret
+
+Example:
+
+```yaml
+apiVersion: v1
+
+kind: Secret
+
+metadata:
+  name: database-secret
+
+data:
+
+ username: YWRtaW4=
+
+ password: cGFzc3dvcmQ=
+```
+
+Values are Base64 encoded.
+
+---
+
+Check:
+
+```bash
+kubectl get secrets
+```
+
+---
+
+# 5. ConfigMap vs Secret
+
+| ConfigMap            | Secret         |
+| -------------------- | -------------- |
+| Normal configuration | Sensitive data |
+| URLs                 | Passwords      |
+| Environment settings | Tokens         |
+| Plain text           | Base64 encoded |
+
+---
+
+# 6. Kubernetes Storage
+
+Containers are temporary.
+
+Example:
+
+```text
+Container
+
+↓
+
+Application Data
+
+↓
+
+Container Deleted
+
+↓
+
+Data Lost
+```
+
+For permanent data, Kubernetes uses storage objects.
+
+---
+
+# 7. Volume
+
+A Volume provides storage to containers.
+
+Example:
+
+```text
+Pod
+
+|
+
+Container
+
+|
+
+Volume
+
+|
+
+Storage
+```
+
+---
+
+Types:
+
+* emptyDir
+* hostPath
+* Persistent Volume
+* Cloud storage
+
+---
+
+# 8. emptyDir Volume
+
+Temporary storage.
+
+Created when Pod starts.
+
+Deleted when Pod is removed.
+
+Example:
+
+```yaml
+volumes:
+
+- name: cache
+
+  emptyDir: {}
+```
+
+Use cases:
+
+* Temporary files
+* Cache
+
+---
+
+# 9. Persistent Volume (PV)
+
+A Persistent Volume is storage created by an administrator or provisioner.
+
+Examples:
+
+AWS:
+
+* EBS
+* EFS
+
+Architecture:
+
+```text
+Pod
+
+↓
+
+PVC
+
+↓
+
+PV
+
+↓
+
+AWS Storage
+```
+
+---
+
+# 10. Persistent Volume Claim (PVC)
+
+A PVC is a request for storage.
+
+Application says:
+
+"I need 20GB storage"
+
+PVC finds matching PV.
+
+Example:
+
+```yaml
+apiVersion: v1
+
+kind: PersistentVolumeClaim
+
+metadata:
+
+ name: database-storage
+
+
+spec:
+
+ accessModes:
+
+ - ReadWriteOnce
+
+
+ resources:
+
+  requests:
+
+   storage: 20Gi
+```
+
+---
+
+# 11. StorageClass
+
+StorageClass provides dynamic storage creation.
+
+Without StorageClass:
+
+```text
+Admin
+
+↓
+
+Create PV
+
+↓
+
+Application uses PV
+```
+
+With StorageClass:
+
+```text
+Application
+
+↓
+
+PVC
+
+↓
+
+StorageClass
+
+↓
+
+Automatically creates PV
+```
+
+---
+
+# 12. AWS Storage in EKS
+
+Common options:
+
+## Amazon EBS
+
+Block storage.
+
+Good for:
+
+* Databases
+* Single-node storage
+
+Example:
+
+```text
+MySQL Pod
+
+↓
+
+EBS Volume
+```
+
+---
+
+## Amazon EFS
+
+Shared file system.
+
+Good for:
+
+* Multiple Pods
+* Shared files
+
+Example:
+
+```text
+Pod 1
+  |
+  |
+EFS
+  |
+  |
+Pod 2
+```
+
+---
+
+# 13. StatefulSet
+
+Deployments are for stateless applications.
+
+Example:
+
+* Web servers
+* APIs
+
+Databases need stable identity.
+
+StatefulSet provides:
+
+* Stable Pod names
+* Stable storage
+* Ordered deployment
+
+---
+
+Example:
+
+```text
+mysql-0
+
+mysql-1
+
+mysql-2
+```
+
+Each Pod keeps identity.
+
+---
+
+# 14. StatefulSet Example
+
+```yaml
+apiVersion: apps/v1
+
+kind: StatefulSet
+
+metadata:
+
+ name: mysql
+
+
+spec:
+
+ serviceName: mysql
+
+ replicas: 3
+
+
+ template:
+
+  spec:
+
+   containers:
+
+   - name: mysql
+
+     image: mysql
+```
+
+---
+
+# 15. DaemonSet
+
+DaemonSet runs one Pod on every node.
+
+Example:
+
+```text
+Node 1
+
+↓
+
+Logging Agent
+
+
+Node 2
+
+↓
+
+Logging Agent
+```
+
+Used for:
+
+* Monitoring agents
+* Log collectors
+* Security agents
+
+---
+
+Example:
+
+```yaml
+apiVersion: apps/v1
+
+kind: DaemonSet
+
+metadata:
+
+ name: fluent-bit
+```
+
+---
+
+# 16. Jobs
+
+Jobs run tasks that complete.
+
+Examples:
+
+* Database migration
+* Backup
+* Batch processing
+
+Flow:
+
+```text
+Job
+
+↓
+
+Pod Created
+
+↓
+
+Task Completed
+
+↓
+
+Pod Stops
+```
+
+---
+
+Example:
+
+```yaml
+apiVersion: batch/v1
+
+kind: Job
+
+metadata:
+
+ name: backup-job
+```
+
+---
+
+# 17. CronJob
+
+CronJob runs Jobs on a schedule.
+
+Example:
+
+Daily backup:
+
+```text
+Every day
+
+2 AM
+
+↓
+
+Backup Job
+```
+
+---
+
+Example:
+
+```yaml
+apiVersion: batch/v1
+
+kind: CronJob
+
+metadata:
+
+ name: daily-backup
+
+
+spec:
+
+ schedule:
+
+  "0 2 * * *"
+```
+
+---
+
+# 18. Kubernetes Probes
+
+Kubernetes needs to know application health.
+
+Three types:
+
+---
+
+# Liveness Probe
+
+Checks:
+
+"Is the application alive?"
+
+If failed:
+
+```text
+Restart Container
+```
+
+Example:
+
+```yaml
+livenessProbe:
+
+ httpGet:
+
+  path: /
+
+  port: 80
+```
+
+---
+
+# Readiness Probe
+
+Checks:
+
+"Can this application receive traffic?"
+
+If failed:
+
+```text
+Remove from Service
+```
+
+---
+
+# Startup Probe
+
+Used for slow applications.
+
+Example:
+
+* Large Java applications
+* Machine learning models
+
+---
+
+# 19. Resource Requests and Limits
+
+Containers need CPU and memory.
+
+Example:
+
+```yaml
+resources:
+
+ requests:
+
+  memory: "256Mi"
+
+  cpu: "500m"
+
+
+ limits:
+
+  memory: "512Mi"
+
+  cpu: "1"
+```
+
+---
+
+## Request
+
+Minimum resources required.
+
+---
+
+## Limit
+
+Maximum resources allowed.
+
+---
+
+# 20. Kubernetes Scheduling
+
+Scheduler decides where Pods run.
+
+Factors:
+
+* CPU
+* Memory
+* Labels
+* Rules
+
+---
+
+# 21. Node Selector
+
+Run Pod on specific node.
+
+Example:
+
+Node:
+
+```text
+environment=gpu
+```
+
+Pod:
+
+```yaml
+nodeSelector:
+
+ environment: gpu
+```
+
+---
+
+# 22. Taints and Tolerations
+
+Used to control Pod placement.
+
+Example:
+
+GPU node:
+
+```text
+No normal Pods allowed
+```
+
+Add taint:
+
+```bash
+kubectl taint nodes gpu-node gpu=true:NoSchedule
+```
+
+Pod needs matching toleration.
+
+---
+
+# 23. Affinity
+
+Affinity provides advanced scheduling rules.
+
+Example:
+
+"Run application close to database."
+
+Architecture:
+
+```text
+Application Pod
+
+↓
+
+Same Node/AZ
+
+↓
+
+Database Pod
+```
+
+---
+
+# 24. Ingress
+
+Ingress manages external HTTP traffic.
+
+Without Ingress:
+
+```text
+Application 1
+
+↓
+
+Load Balancer
+
+
+Application 2
+
+↓
+
+Load Balancer
+```
+
+Many load balancers.
+
+---
+
+With Ingress:
+
+```text
+Internet
+
+↓
+
+Ingress Controller
+
+↓
+
+Application Services
+```
+
+---
+
+Example:
+
+```text
+example.com/api
+
+↓
+
+Backend Service
+
+
+example.com/web
+
+↓
+
+Frontend Service
+```
+
+---
+
+# 25. AWS Ingress in EKS
+
+EKS commonly uses:
+
+AWS Load Balancer Controller
+
+Flow:
+
+```text
+User
+
+↓
+
+Application Load Balancer
+
+↓
+
+Ingress
+
+↓
+
+Service
+
+↓
+
+Pods
+```
+
+---
+
+# 26. Network Policies
+
+Network Policies control Pod communication.
+
+Default:
+
+```text
+All Pods can communicate
+```
+
+With Network Policy:
+
+```text
+Frontend
+
+✔
+
+Backend
+
+
+Frontend
+
+✘
+
+Database
+```
+
+---
+
+Example:
+
+Allow only frontend:
+
+```yaml
+kind: NetworkPolicy
+
+spec:
+
+ podSelector:
+
+  matchLabels:
+
+   app: database
+```
+
+---
+
+# 27. Kubernetes Security Practices
+
+Recommended:
+
+* Use RBAC
+* Avoid running as root
+* Use Secrets
+* Scan container images
+* Use Network Policies
+* Limit resources
+* Enable audit logging
+
+---
+
+# 28. Complete Production Application Flow
+
+Example:
+
+```text
+User
+
+↓
+
+AWS Load Balancer
+
+↓
+
+Ingress
+
+↓
+
+Service
+
+↓
+
+Deployment
+
+↓
+
+Pods
+
+↓
+
+Containers
+
+↓
+
+Persistent Storage
+
+↓
+
+Database
+```
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ ConfigMaps
+✅ Secrets
+✅ Volumes
+✅ PV
+✅ PVC
+✅ StorageClass
+✅ EBS/EFS concepts
+✅ StatefulSets
+✅ DaemonSets
+✅ Jobs
+✅ CronJobs
+✅ Health Probes
+✅ Resource Management
+✅ Scheduling
+✅ Taints and Tolerations
+✅ Affinity
+✅ Ingress
+✅ Network Policies
+
+---
+
+# Hands-on Lab
+
+Practice:
+
+1. Create ConfigMap.
+2. Inject configuration into a Pod.
+3. Create Secret.
+4. Deploy application with PVC.
+5. Deploy StatefulSet.
+6. Create DaemonSet.
+7. Create CronJob.
+8. Configure readiness and liveness probes.
+9. Deploy Ingress.
+
+---
+
+# Next Chapter
+
+# Chapter 7 – Amazon EKS Architecture and Cluster Creation
+
+Topics:
+
+* What is Amazon EKS
+* EKS architecture
+* Control plane
+* Worker nodes
+* Managed Node Groups
+* Self-managed nodes
+* Fargate
+* VPC design for EKS
+* IAM integration
+* eksctl installation
+* Creating your first EKS cluster
+* Deploying your first application on EKS
+* kubectl configuration
+
+This chapter begins the actual EKS journey.
