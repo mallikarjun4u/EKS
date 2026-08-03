@@ -1,0 +1,733 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Bonus Chapter 19 – Terraform for EKS Infrastructure Automation
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* Why Terraform is used with EKS
+* Terraform architecture
+* Infrastructure as Code (IaC)
+* Creating AWS networking with Terraform
+* Creating EKS clusters using Terraform
+* Managing node groups
+* IAM automation
+* Terraform modules
+* State management
+* Production Terraform practices
+
+---
+
+# 1. What is Infrastructure as Code (IaC)?
+
+Infrastructure as Code means:
+
+"Managing infrastructure using configuration files instead of manually clicking in AWS Console."
+
+Traditional approach:
+
+```text id="1f3x8m"
+AWS Console
+
+     |
+
+Create VPC
+
+     |
+
+Create EC2
+
+     |
+
+Create EKS
+
+     |
+
+Manual Changes
+```
+
+---
+
+Infrastructure as Code:
+
+```text id="8n4q5k"
+Terraform Code
+
+     |
+
+Terraform Engine
+
+     |
+
+AWS Infrastructure
+
+     |
+
+VPC + EKS + Nodes
+```
+
+---
+
+# 2. What is Terraform?
+
+HashiCorp Terraform is an Infrastructure as Code tool.
+
+Terraform can create:
+
+* VPC
+* Subnets
+* EC2
+* IAM Roles
+* EKS Clusters
+* Load Balancers
+* Databases
+
+---
+
+# 3. Why Use Terraform with EKS?
+
+Without Terraform:
+
+```text
+Manual AWS Console
+
+↓
+
+Configuration Drift
+
+↓
+
+Hard to Reproduce
+```
+
+---
+
+With Terraform:
+
+```text
+Code
+
+↓
+
+Version Control
+
+↓
+
+Repeatable Infrastructure
+```
+
+---
+
+# 4. Terraform Architecture
+
+```text id="q8m4s2"
+
+Terraform Files
+
+      |
+
+Terraform CLI
+
+      |
+
+AWS Provider
+
+      |
+
+AWS API
+
+      |
+
+Resources Created
+
+```
+
+---
+
+# 5. Terraform Basic Workflow
+
+Three main steps:
+
+## 1. Initialize
+
+Downloads providers.
+
+```bash id="4x7n1m"
+terraform init
+```
+
+---
+
+## 2. Plan
+
+Shows changes.
+
+```bash id="7m2q8p"
+terraform plan
+```
+
+---
+
+## 3. Apply
+
+Creates infrastructure.
+
+```bash id="9n4x2k"
+terraform apply
+```
+
+---
+
+# 6. Terraform Project Structure
+
+Production structure:
+
+```text id="v6m3q8"
+
+eks-project/
+
+├── provider.tf
+
+├── variables.tf
+
+├── main.tf
+
+├── outputs.tf
+
+├── versions.tf
+
+└── modules/
+
+    ├── vpc/
+
+    ├── eks/
+
+    └── iam/
+```
+
+---
+
+# 7. Terraform Provider
+
+Provider tells Terraform where to create resources.
+
+Example:
+
+```hcl id="5x7k9m"
+provider "aws" {
+
+ region = "ap-south-1"
+
+}
+```
+
+---
+
+# 8. Terraform Resource
+
+A resource represents AWS infrastructure.
+
+Example:
+
+```hcl id="q2m8x4"
+resource "aws_s3_bucket" "backup" {
+
+ bucket = "eks-backup"
+
+}
+```
+
+---
+
+# 9. Terraform Variables
+
+Instead of hardcoding values:
+
+Bad:
+
+```hcl id="1q9m5z"
+instance_type = "t3.medium"
+```
+
+Better:
+
+```hcl id="6m4p8x"
+variable "instance_type" {
+
+ default = "t3.medium"
+
+}
+```
+
+---
+
+# 10. Terraform State
+
+Terraform stores infrastructure information in:
+
+```text id="h5q8m2"
+terraform.tfstate
+```
+
+It tracks:
+
+* Created resources
+* Resource IDs
+* Current configuration
+
+---
+
+# 11. Remote State
+
+Production teams store state remotely.
+
+Common backend:
+
+* Amazon S3
+* DynamoDB locking
+
+Architecture:
+
+```text id="c7m9q3"
+
+Developer
+
+    |
+
+Terraform
+
+    |
+
+S3 Backend
+
+    |
+
+State File
+
+```
+
+Benefits:
+
+* Team collaboration
+* Locking
+* Backup
+
+---
+
+# 12. Creating VPC for EKS
+
+Production VPC:
+
+```text id="w5m8k1"
+
+                 VPC
+
+
+      ----------------------------
+
+
+      Public Subnets
+
+      |
+
+      Load Balancers
+
+
+      ----------------------------
+
+
+      Private Subnets
+
+      |
+
+      EKS Worker Nodes
+
+
+      ----------------------------
+
+```
+
+---
+
+VPC includes:
+
+* CIDR
+* Subnets
+* Route Tables
+* Internet Gateway
+* NAT Gateway
+
+---
+
+# 13. Terraform EKS Module
+
+Instead of writing everything manually, use modules.
+
+Example:
+
+```text id="z7m3x9"
+
+Terraform
+
+    |
+
+EKS Module
+
+    |
+
+Creates:
+
+- Control Plane
+- Node Groups
+- IAM
+- Security Groups
+
+```
+
+---
+
+# 14. EKS Terraform Example
+
+Example:
+
+```hcl id="m5x8q2"
+
+module "eks" {
+
+ source = "terraform-aws-modules/eks/aws"
+
+
+ cluster_name = "production"
+
+
+ cluster_version = "1.31"
+
+}
+
+```
+
+---
+
+# 15. Node Group Automation
+
+Terraform creates:
+
+```text id="n8q2m6"
+
+EKS Cluster
+
+      |
+
+Node Group
+
+      |
+
+EC2 Instances
+
+      |
+
+Pods
+
+```
+
+---
+
+Example:
+
+```hcl id="p7m4x1"
+
+managed_node_groups = {
+
+ general = {
+
+  instance_types = ["t3.medium"]
+
+  desired_size = 3
+
+ }
+
+}
+
+```
+
+---
+
+# 16. IAM Automation
+
+Terraform can create:
+
+* EKS Cluster Role
+* Node Role
+* IRSA Roles
+
+Example:
+
+```text id="x5m8q3"
+
+Terraform
+
+ |
+
+IAM Role
+
+ |
+
+Kubernetes Service Account
+
+ |
+
+AWS Access
+
+```
+
+---
+
+# 17. Terraform Modules
+
+Modules organize reusable code.
+
+Example:
+
+```text id="r8m2k4"
+
+modules/
+
+
+vpc/
+
+ ├── main.tf
+
+
+eks/
+
+ ├── main.tf
+
+
+iam/
+
+ ├── main.tf
+
+```
+
+---
+
+Benefits:
+
+* Reuse
+* Standardization
+* Easier maintenance
+
+---
+
+# 18. Terraform + CI/CD
+
+Production workflow:
+
+```text id="j6m9q2"
+
+Developer
+
+ |
+
+Git Push
+
+ |
+
+CI Pipeline
+
+ |
+
+terraform plan
+
+ |
+
+Approval
+
+ |
+
+terraform apply
+
+ |
+
+AWS Infrastructure
+
+```
+
+---
+
+# 19. Terraform Best Practices
+
+## Use Remote State
+
+✅ S3
+✅ DynamoDB Locking
+
+---
+
+## Use Modules
+
+Avoid:
+
+```text
+One huge main.tf
+```
+
+---
+
+## Use Variables
+
+Avoid hardcoding.
+
+---
+
+## Use Version Control
+
+Store:
+
+```text
+Terraform Code
+
++
+
+Git History
+```
+
+---
+
+## Separate Environments
+
+Example:
+
+```text id="u5m8x7"
+
+dev/
+
+terraform.tfvars
+
+
+stage/
+
+terraform.tfvars
+
+
+prod/
+
+terraform.tfvars
+
+```
+
+---
+
+# 20. Terraform + EKS Complete Architecture
+
+```text id="s3m8q6"
+
+                 Git Repository
+
+                       |
+
+                  Terraform Code
+
+                       |
+
+                Terraform Pipeline
+
+                       |
+
+        ---------------------------------
+
+        AWS Infrastructure
+
+
+        VPC
+
+        IAM
+
+        EKS
+
+        Node Groups
+
+        Load Balancers
+
+        Storage
+
+        ---------------------------------
+
+```
+
+---
+
+# Hands-on Lab
+
+Build:
+
+## Phase 1
+
+Create:
+
+* VPC
+* Subnets
+* NAT Gateway
+
+---
+
+## Phase 2
+
+Create:
+
+* EKS Cluster
+* Managed Node Groups
+
+---
+
+## Phase 3
+
+Configure:
+
+* IAM Roles
+* IRSA
+* Add-ons
+
+---
+
+## Phase 4
+
+Deploy:
+
+* Applications
+* Helm Charts
+* Monitoring
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ Infrastructure as Code
+✅ Terraform basics
+✅ Terraform workflow
+✅ Terraform state
+✅ Remote state management
+✅ VPC automation
+✅ EKS automation
+✅ Node group automation
+✅ IAM automation
+✅ Production Terraform practices
+
+---
+
+# Next Bonus Chapter
+
+# Chapter 20 – Advanced EKS DevOps Toolchain
+
+Topics:
+
+* GitHub Actions for EKS
+* Jenkins pipelines
+* Argo CD advanced patterns
+* GitOps repository design
+* Security scanning
+* Image lifecycle management
+* Enterprise DevOps workflow
