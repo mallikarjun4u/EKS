@@ -2,6 +2,60 @@ You have completed **Chapter 1 to Chapter 19** of the Amazon EKS Zero to Hero co
 
 Remaining chapters in the extended roadmap:
 
+Remaing and indexxx
+# Amazon EKS Zero to Hero – Complete Chapter Index
+
+## Core EKS Course
+
+1. **Introduction to Kubernetes and Amazon EKS**
+2. **Kubernetes Fundamentals**
+3. **AWS Fundamentals for EKS**
+4. **EKS Architecture Deep Dive**
+5. **Creating and Managing EKS Clusters**
+6. **Kubernetes Workloads on EKS**
+7. **EKS Networking Fundamentals**
+8. **EKS Networking Deep Dive**
+9. **EKS Storage Deep Dive**
+10. **EKS Security Deep Dive**
+11. **EKS Deployment Strategies and CI/CD**
+12. **EKS Monitoring, Logging, and Troubleshooting**
+13. **EKS Production Architecture and Best Practices**
+14. **Advanced EKS Topics**
+15. **Real-World EKS Projects**
+16. **EKS Interview Preparation**
+17. **EKS Certification Preparation and Final Revision Guide**
+
+---
+
+## Bonus Advanced EKS Course
+
+18. **EKS Hands-On Capstone Project (End-to-End)**
+19. **Terraform for EKS Infrastructure Automation**
+20. **Advanced EKS DevOps Toolchain**
+21. **Advanced Terraform for Enterprise EKS**
+22. **Advanced Helm and Kubernetes Package Management**
+23. **GitOps Enterprise Architecture with Argo CD**
+24. **EKS Security Engineering**
+25. **EKS Observability Engineering**
+26. **EKS Performance Engineering**
+27. **Advanced EKS Networking**
+28. **EKS Reliability Engineering and SRE Practices**
+29. **EKS Multi-Cluster and Enterprise Architecture**
+30. **Real Production EKS Case Studies**
+31. **Senior DevOps/SRE Interview Masterclass**
+32. **Final EKS Certification and Career Roadmap**
+
+---
+
+**Current progress:**
+✅ Completed: Chapters **1–19**
+⏳ Remaining: Chapters **20–32** (13 chapters)
+
+Next continuation point:
+
+**Chapter 20 – Advanced EKS DevOps Toolchain**
+
+
 # Chapter 20 – Advanced EKS DevOps Toolchain
 
 Topics:
