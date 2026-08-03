@@ -1,0 +1,679 @@
+You have completed the **Amazon EKS Zero to Hero 17-chapter course**.
+
+Since you sent **"."**, I’ll continue with an additional bonus section:
+
+# Bonus Chapter 18 – EKS Hands-On Capstone Project (End-to-End)
+
+## Goal
+
+Build a production-style EKS platform from scratch:
+
+```text
+Developer
+
+   |
+
+GitHub Repository
+
+   |
+
+CI/CD Pipeline
+
+   |
+
+Docker Image
+
+   |
+
+Amazon ECR
+
+   |
+
+Helm Chart
+
+   |
+
+Argo CD
+
+   |
+
+Amazon EKS
+
+   |
+
+Application
+
+   |
+
+Monitoring + Logging
+```
+
+---
+
+# Project Architecture
+
+```text
+                         Users
+
+                           |
+
+                        Route 53
+
+                           |
+
+                         AWS WAF
+
+                           |
+
+                 Application Load Balancer
+
+                           |
+
+                     Ingress Controller
+
+                           |
+
+              Kubernetes Services
+
+                           |
+
+        --------------------------------
+
+        Frontend Pods
+
+        Backend Pods
+
+        Worker Pods
+
+        --------------------------------
+
+                           |
+
+                    Amazon RDS
+
+```
+
+---
+
+# Phase 1 – Infrastructure Setup
+
+## Tools Required
+
+Install:
+
+* AWS CLI
+* kubectl
+* eksctl
+* Terraform
+* Helm
+* Docker
+* Git
+
+Verify:
+
+```bash
+aws --version
+
+kubectl version
+
+helm version
+
+terraform version
+```
+
+---
+
+# Phase 2 – Create VPC
+
+Production VPC:
+
+```text
+VPC
+
+ |
+
+--------------------------------
+
+Public Subnets
+
+- Load Balancer
+
+
+Private Subnets
+
+- Worker Nodes
+
+
+Database Subnets
+
+- RDS
+
+--------------------------------
+```
+
+Requirements:
+
+✅ Multiple Availability Zones
+✅ NAT Gateway
+✅ Internet Gateway
+✅ Route Tables
+
+---
+
+# Phase 3 – Create EKS Cluster
+
+Example:
+
+```bash
+eksctl create cluster \
+--name production-cluster \
+--region ap-south-1
+```
+
+Verify:
+
+```bash
+kubectl get nodes
+```
+
+Expected:
+
+```text
+NAME             STATUS
+
+node-1           Ready
+
+node-2           Ready
+```
+
+---
+
+# Phase 4 – Configure Node Groups
+
+Create:
+
+## General Node Group
+
+For applications:
+
+```text
+Frontend
+
+Backend
+
+API
+```
+
+---
+
+## Spot Node Group
+
+For:
+
+```text
+Batch Jobs
+
+Testing
+
+Workers
+```
+
+---
+
+## GPU Node Group
+
+For:
+
+```text
+AI/ML workloads
+```
+
+---
+
+# Phase 5 – Containerize Application
+
+Example Dockerfile:
+
+```dockerfile
+FROM nginx
+
+COPY . /usr/share/nginx/html
+```
+
+Build:
+
+```bash
+docker build -t ecommerce:v1 .
+```
+
+Test:
+
+```bash
+docker run -p 8080:80 ecommerce:v1
+```
+
+---
+
+# Phase 6 – Push Image to ECR
+
+Create repository:
+
+```bash
+aws ecr create-repository \
+--repository-name ecommerce
+```
+
+Authenticate:
+
+```bash
+aws ecr get-login-password
+```
+
+Push:
+
+```bash
+docker push image-url
+```
+
+---
+
+# Phase 7 – Kubernetes Deployment
+
+Create:
+
+```text
+kubernetes/
+
+├── namespace.yaml
+
+├── deployment.yaml
+
+├── service.yaml
+
+├── ingress.yaml
+
+├── configmap.yaml
+
+└── secret.yaml
+```
+
+---
+
+Deploy:
+
+```bash
+kubectl apply -f kubernetes/
+```
+
+Check:
+
+```bash
+kubectl get pods
+```
+
+---
+
+# Phase 8 – Install AWS Load Balancer Controller
+
+Purpose:
+
+Creates ALB automatically.
+
+Architecture:
+
+```text
+Internet
+
+ |
+
+ALB
+
+ |
+
+Ingress
+
+ |
+
+Service
+
+ |
+
+Pods
+```
+
+Verify:
+
+```bash
+kubectl get pods -n kube-system
+```
+
+---
+
+# Phase 9 – Helm Packaging
+
+Create chart:
+
+```bash
+helm create ecommerce
+```
+
+Structure:
+
+```text
+ecommerce/
+
+├── Chart.yaml
+
+├── values.yaml
+
+└── templates/
+
+    ├── deployment.yaml
+
+    ├── service.yaml
+
+    └── ingress.yaml
+```
+
+Install:
+
+```bash
+helm install ecommerce ./ecommerce
+```
+
+---
+
+# Phase 10 – CI/CD Pipeline
+
+Pipeline:
+
+```text
+Developer
+
+ |
+
+Git Push
+
+ |
+
+GitHub Actions
+
+ |
+
+Docker Build
+
+ |
+
+Security Scan
+
+ |
+
+Push ECR
+
+ |
+
+Update Helm Values
+
+ |
+
+Deploy
+```
+
+---
+
+# Phase 11 – GitOps with Argo CD
+
+Install:
+
+```bash
+kubectl create namespace argocd
+```
+
+Flow:
+
+```text
+Git Repository
+
+       |
+
+     Argo CD
+
+       |
+
+     EKS Cluster
+```
+
+Benefits:
+
+* Automated deployment
+* Version control
+* Rollback
+
+---
+
+# Phase 12 – Monitoring Setup
+
+Install:
+
+## Prometheus
+
+Collects:
+
+* CPU
+* Memory
+* Requests
+* Errors
+
+## Grafana
+
+Displays:
+
+* Dashboards
+* Graphs
+* Alerts
+
+Architecture:
+
+```text
+Applications
+
+ |
+
+Metrics
+
+ |
+
+Prometheus
+
+ |
+
+Grafana
+```
+
+---
+
+# Phase 13 – Logging Setup
+
+Install:
+
+Fluent Bit:
+
+```text
+Containers
+
+ |
+
+Fluent Bit
+
+ |
+
+CloudWatch Logs
+
+ |
+
+Dashboard
+```
+
+Collect:
+
+* Application logs
+* Kubernetes logs
+* System logs
+
+---
+
+# Phase 14 – Security Hardening
+
+Enable:
+
+## IAM Roles for Service Accounts
+
+```text
+Pod
+
+ |
+
+IAM Role
+
+ |
+
+AWS Service
+```
+
+---
+
+## Network Policies
+
+Control:
+
+```text
+Pod → Pod Communication
+```
+
+---
+
+## Secrets Management
+
+Use:
+
+* AWS Secrets Manager
+* Kubernetes Secrets
+
+---
+
+# Phase 15 – Autoscaling
+
+## Horizontal Pod Autoscaler
+
+Example:
+
+```text
+CPU > 70%
+
+        |
+
+Increase Pods
+```
+
+---
+
+## Cluster Autoscaler / Karpenter
+
+Example:
+
+```text
+No Node Capacity
+
+        |
+
+Create New Node
+```
+
+---
+
+# Phase 16 – Backup and Disaster Recovery
+
+Backup:
+
+* Kubernetes resources
+* Persistent volumes
+* Application data
+
+Architecture:
+
+```text
+EKS
+
+ |
+
+Velero
+
+ |
+
+S3 Backup
+```
+
+---
+
+# Phase 17 – Production Validation
+
+Check:
+
+## Application
+
+```bash
+kubectl get pods
+```
+
+## Services
+
+```bash
+kubectl get svc
+```
+
+## Ingress
+
+```bash
+kubectl get ingress
+```
+
+## Logs
+
+```bash
+kubectl logs pod-name
+```
+
+## Events
+
+```bash
+kubectl get events
+```
+
+---
+
+# Final Skills Achieved
+
+After this capstone project, you can demonstrate:
+
+✅ EKS cluster creation
+✅ AWS networking
+✅ Kubernetes deployments
+✅ Docker containers
+✅ Helm packaging
+✅ CI/CD automation
+✅ GitOps
+✅ Monitoring
+✅ Logging
+✅ Security
+✅ Scaling
+✅ Production troubleshooting
+
+---
+
+## Recommended Next Step
+
+Build this project practically in AWS and document it as a portfolio project:
+
+**"Production-Ready Microservices Platform on Amazon EKS using Terraform, Helm, GitHub Actions, and Argo CD"**
+
+This is the type of project expected from a mid-level to senior DevOps/SRE engineer.
