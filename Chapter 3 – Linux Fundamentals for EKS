@@ -1,0 +1,1069 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 3 – Linux Fundamentals for EKS
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* Linux operating system basics
+* Linux directory structure
+* File and directory management
+* Users and permissions
+* Processes and services
+* Package management
+* Networking commands
+* SSH
+* Environment variables
+* Shell scripting basics
+* Linux troubleshooting commands
+
+Linux knowledge is essential because:
+
+* Kubernetes nodes run Linux.
+* Container images are mostly Linux-based.
+* Most production troubleshooting happens through Linux commands.
+
+---
+
+# 1. What is Linux?
+
+Linux is an open-source operating system used widely in:
+
+* Cloud servers
+* Data centers
+* Kubernetes nodes
+* Containers
+* Embedded systems
+
+Examples of Linux distributions:
+
+* Ubuntu
+* Amazon Linux
+* Red Hat Enterprise Linux
+* Debian
+* CentOS
+
+AWS EC2 commonly uses:
+
+* Amazon Linux
+* Ubuntu
+
+---
+
+# 2. Linux Architecture
+
+Basic Linux architecture:
+
+```text
++----------------------+
+| Applications         |
++----------------------+
+| Shell                |
++----------------------+
+| Kernel               |
++----------------------+
+| Hardware             |
++----------------------+
+```
+
+---
+
+## Kernel
+
+The kernel is the core of Linux.
+
+It manages:
+
+* CPU
+* Memory
+* Storage
+* Network
+* Hardware communication
+
+Example:
+
+```text
+Application
+
+↓
+
+Kernel
+
+↓
+
+Hardware
+```
+
+---
+
+## Shell
+
+Shell provides a way to communicate with Linux.
+
+Examples:
+
+* bash
+* zsh
+* sh
+
+Example:
+
+```bash
+ls
+```
+
+Shell sends instructions to the kernel.
+
+---
+
+# 3. Connecting to Linux Server
+
+Most cloud servers are accessed using SSH.
+
+Example:
+
+```bash
+ssh username@server-ip
+```
+
+Example:
+
+```bash
+ssh ec2-user@10.0.1.25
+```
+
+---
+
+# 4. Linux File System
+
+Linux uses a tree structure.
+
+```text
+/
+
+├── bin
+├── boot
+├── dev
+├── etc
+├── home
+├── opt
+├── tmp
+├── usr
+└── var
+```
+
+---
+
+# Important Directories
+
+## /
+
+Root directory.
+
+Everything starts here.
+
+---
+
+## /home
+
+User files.
+
+Example:
+
+```text
+/home/john
+```
+
+---
+
+## /etc
+
+Configuration files.
+
+Examples:
+
+```text
+/etc/passwd
+
+/etc/hosts
+
+/etc/ssh
+```
+
+---
+
+## /var
+
+Variable data.
+
+Contains:
+
+* Logs
+* Application data
+
+Example:
+
+```text
+/var/log
+```
+
+---
+
+## /tmp
+
+Temporary files.
+
+---
+
+## /bin
+
+Essential Linux commands.
+
+Examples:
+
+```text
+ls
+cp
+mv
+rm
+```
+
+---
+
+# 5. Basic Linux Commands
+
+## Show Current Directory
+
+```bash
+pwd
+```
+
+Example:
+
+Output:
+
+```text
+/home/ec2-user
+```
+
+---
+
+## List Files
+
+```bash
+ls
+```
+
+Detailed:
+
+```bash
+ls -l
+```
+
+Show hidden files:
+
+```bash
+ls -la
+```
+
+---
+
+## Change Directory
+
+```bash
+cd /var/log
+```
+
+Go home:
+
+```bash
+cd ~
+```
+
+Previous directory:
+
+```bash
+cd -
+```
+
+---
+
+## Create Directory
+
+```bash
+mkdir test
+```
+
+---
+
+## Create File
+
+```bash
+touch file.txt
+```
+
+---
+
+## View File
+
+```bash
+cat file.txt
+```
+
+Large files:
+
+```bash
+less file.txt
+```
+
+---
+
+## Copy Files
+
+```bash
+cp source destination
+```
+
+Example:
+
+```bash
+cp app.conf /backup/
+```
+
+---
+
+## Move Files
+
+```bash
+mv old new
+```
+
+---
+
+## Delete Files
+
+```bash
+rm file.txt
+```
+
+Delete directory:
+
+```bash
+rm -r folder
+```
+
+---
+
+# 6. File Permissions
+
+Linux permissions control access.
+
+Example:
+
+```text
+-rwxr-xr--
+```
+
+Meaning:
+
+```text
+Owner   Group   Others
+
+rwx     r-x     r--
+```
+
+---
+
+## Permission Types
+
+| Symbol | Meaning |
+| ------ | ------- |
+| r      | Read    |
+| w      | Write   |
+| x      | Execute |
+
+---
+
+# 7. chmod Command
+
+Change permissions.
+
+Example:
+
+```bash
+chmod 755 script.sh
+```
+
+Meaning:
+
+```text
+Owner:
+rwx
+
+Group:
+r-x
+
+Others:
+r-x
+```
+
+---
+
+Common permissions:
+
+```text
+644
+```
+
+Files:
+
+```text
+rw-r--r--
+```
+
+---
+
+```text
+755
+```
+
+Executables:
+
+```text
+rwxr-xr-x
+```
+
+---
+
+# 8. Users and Groups
+
+Linux is multi-user.
+
+View users:
+
+```bash
+cat /etc/passwd
+```
+
+---
+
+Create user:
+
+```bash
+sudo useradd developer
+```
+
+---
+
+Switch user:
+
+```bash
+su developer
+```
+
+---
+
+Current user:
+
+```bash
+whoami
+```
+
+---
+
+Groups:
+
+```bash
+groups
+```
+
+---
+
+# 9. Root User
+
+Root has full permissions.
+
+Example:
+
+```text
+root
+
+↓
+
+Can modify everything
+```
+
+Use carefully.
+
+---
+
+Run command as root:
+
+```bash
+sudo command
+```
+
+Example:
+
+```bash
+sudo yum update
+```
+
+---
+
+# 10. Package Management
+
+Linux installs software using package managers.
+
+---
+
+## Amazon Linux / RHEL
+
+Using yum:
+
+```bash
+sudo yum install nginx
+```
+
+---
+
+## Ubuntu
+
+Using apt:
+
+```bash
+sudo apt update
+
+sudo apt install nginx
+```
+
+---
+
+# 11. Processes
+
+A process is a running program.
+
+View processes:
+
+```bash
+ps
+```
+
+Detailed:
+
+```bash
+ps aux
+```
+
+---
+
+Real-time monitoring:
+
+```bash
+top
+```
+
+or
+
+```bash
+htop
+```
+
+---
+
+Find process:
+
+```bash
+ps aux | grep nginx
+```
+
+---
+
+Kill process:
+
+```bash
+kill PID
+```
+
+Force kill:
+
+```bash
+kill -9 PID
+```
+
+---
+
+# 12. Services
+
+Linux services run in the background.
+
+Example:
+
+* nginx
+* docker
+* kubelet
+
+---
+
+Check service:
+
+```bash
+systemctl status nginx
+```
+
+---
+
+Start service:
+
+```bash
+systemctl start nginx
+```
+
+---
+
+Stop service:
+
+```bash
+systemctl stop nginx
+```
+
+---
+
+Restart:
+
+```bash
+systemctl restart nginx
+```
+
+---
+
+Enable on boot:
+
+```bash
+systemctl enable nginx
+```
+
+---
+
+# 13. Logs
+
+Logs are critical for troubleshooting.
+
+Common location:
+
+```bash
+/var/log
+```
+
+View logs:
+
+```bash
+cat /var/log/messages
+```
+
+Follow logs:
+
+```bash
+tail -f logfile
+```
+
+Example:
+
+```bash
+tail -f /var/log/nginx/access.log
+```
+
+---
+
+# 14. Disk Management
+
+Check disk usage:
+
+```bash
+df -h
+```
+
+Example:
+
+```text
+Filesystem
+
+Size
+
+Used
+
+Available
+```
+
+---
+
+Directory size:
+
+```bash
+du -sh folder
+```
+
+---
+
+List disks:
+
+```bash
+lsblk
+```
+
+---
+
+# 15. Memory Management
+
+Check memory:
+
+```bash
+free -m
+```
+
+Output:
+
+```text
+Total
+
+Used
+
+Free
+```
+
+---
+
+# 16. CPU Information
+
+CPU details:
+
+```bash
+lscpu
+```
+
+---
+
+Load average:
+
+```bash
+uptime
+```
+
+---
+
+# 17. Networking Commands
+
+## Check IP Address
+
+```bash
+ip addr
+```
+
+---
+
+## Test Connectivity
+
+```bash
+ping google.com
+```
+
+---
+
+## DNS Lookup
+
+```bash
+nslookup amazon.com
+```
+
+---
+
+## Check Ports
+
+```bash
+netstat -tulpn
+```
+
+or
+
+```bash
+ss -tulpn
+```
+
+---
+
+## Download Files
+
+```bash
+wget URL
+```
+
+---
+
+## Test HTTP
+
+```bash
+curl website.com
+```
+
+---
+
+# 18. SSH Configuration
+
+SSH configuration:
+
+```bash
+/etc/ssh/sshd_config
+```
+
+Restart SSH:
+
+```bash
+systemctl restart sshd
+```
+
+---
+
+# 19. Environment Variables
+
+Environment variables store configuration.
+
+View:
+
+```bash
+env
+```
+
+Example:
+
+```bash
+echo $PATH
+```
+
+Set variable:
+
+```bash
+export APP_ENV=production
+```
+
+---
+
+# 20. Linux Shell Scripting Basics
+
+A shell script automates commands.
+
+Example:
+
+```bash
+#!/bin/bash
+
+echo "Starting Application"
+
+date
+
+whoami
+```
+
+Save:
+
+```text
+script.sh
+```
+
+Execute:
+
+```bash
+chmod +x script.sh
+
+./script.sh
+```
+
+---
+
+# 21. Useful Linux Commands for Kubernetes
+
+## Check OS
+
+```bash
+cat /etc/os-release
+```
+
+---
+
+## Check Kernel
+
+```bash
+uname -r
+```
+
+---
+
+## Check CPU
+
+```bash
+lscpu
+```
+
+---
+
+## Check Memory
+
+```bash
+free -h
+```
+
+---
+
+## Check Storage
+
+```bash
+df -h
+```
+
+---
+
+## Check Network
+
+```bash
+ip route
+```
+
+---
+
+# 22. Linux Troubleshooting Flow
+
+When an application fails:
+
+## Step 1: Check Process
+
+```bash
+ps aux | grep application
+```
+
+---
+
+## Step 2: Check Logs
+
+```bash
+tail -100 logfile
+```
+
+---
+
+## Step 3: Check Resources
+
+CPU:
+
+```bash
+top
+```
+
+Memory:
+
+```bash
+free -h
+```
+
+Disk:
+
+```bash
+df -h
+```
+
+---
+
+## Step 4: Check Network
+
+```bash
+curl localhost:8080
+```
+
+---
+
+# Linux and Kubernetes Relationship
+
+In EKS:
+
+```text
+EC2 Worker Node
+
+↓
+
+Linux Operating System
+
+↓
+
+containerd Runtime
+
+↓
+
+kubelet
+
+↓
+
+Kubernetes Pods
+```
+
+Understanding Linux helps troubleshoot:
+
+* Node failures
+* Container failures
+* Disk problems
+* Networking problems
+* Application crashes
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ Linux architecture
+✅ File system
+✅ Basic commands
+✅ Permissions
+✅ Users and groups
+✅ Processes
+✅ Services
+✅ Package management
+✅ Logs
+✅ Networking commands
+✅ Shell scripting basics
+✅ Troubleshooting methods
+
+---
+
+# Hands-on Lab
+
+Perform these tasks on an EC2 Linux instance:
+
+1. Connect using SSH.
+2. Create a user.
+3. Create a directory structure.
+4. Install nginx.
+5. Start nginx service.
+6. Check logs.
+7. Create a shell script.
+8. Monitor CPU and memory.
+
+---
+
+# Next Chapter
+
+## Chapter 4 – Docker Fundamentals
+
+Topics:
+
+* What are containers?
+* Docker architecture
+* Images
+* Containers
+* Dockerfile
+* Docker Hub
+* Volumes
+* Networks
+* Docker Compose
+* Container troubleshooting
+* Building applications for Kubernetes
+
+This chapter will prepare you for deploying containers on EKS.
