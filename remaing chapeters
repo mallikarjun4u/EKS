@@ -1,0 +1,205 @@
+You have completed **Chapter 1 to Chapter 19** of the Amazon EKS Zero to Hero course.
+
+Remaining chapters in the extended roadmap:
+
+# Chapter 20 – Advanced EKS DevOps Toolchain
+
+Topics:
+
+* GitHub Actions for EKS
+* Jenkins pipelines
+* CI/CD architecture
+* GitOps workflow
+* Argo CD advanced patterns
+* Repository design strategies
+* Image lifecycle management
+* Container security scanning
+* Enterprise DevOps workflow
+
+---
+
+# Chapter 21 – EKS Infrastructure Automation with Terraform (Advanced)
+
+Topics:
+
+* Advanced Terraform modules
+* Terraform workspace strategy
+* Multi-account AWS architecture
+* Remote state design
+* Terraform CI/CD pipelines
+* Infrastructure testing
+* Drift detection
+* Terraform security best practices
+
+---
+
+# Chapter 22 – Kubernetes Package Management with Helm (Advanced)
+
+Topics:
+
+* Helm architecture
+* Chart development
+* Templates
+* Values management
+* Helm hooks
+* Helm repositories
+* Helm upgrades and rollback
+* Enterprise Helm practices
+
+---
+
+# Chapter 23 – GitOps Enterprise Architecture
+
+Topics:
+
+* GitOps principles
+* Argo CD architecture
+* ApplicationSets
+* Multi-cluster GitOps
+* Environment promotion strategy
+* Disaster recovery with GitOps
+* GitOps security model
+
+---
+
+# Chapter 24 – EKS Security Engineering
+
+Topics:
+
+* Kubernetes security model
+* Pod Security Standards
+* Network Policies
+* Admission controllers
+* Image security
+* Runtime security
+* Falco
+* Secrets management
+* Supply chain security
+
+---
+
+# Chapter 25 – EKS Observability Engineering
+
+Topics:
+
+* Prometheus architecture
+* Grafana dashboards
+* AlertManager
+* OpenTelemetry
+* Distributed tracing
+* CloudWatch Container Insights
+* Logging pipelines
+* SRE monitoring practices
+
+---
+
+# Chapter 26 – EKS Performance Engineering
+
+Topics:
+
+* Kubernetes performance tuning
+* Node optimization
+* Pod resource tuning
+* CPU and memory optimization
+* Network performance
+* Storage performance
+* Application scaling strategies
+
+---
+
+# Chapter 27 – EKS Networking Expert Level
+
+Topics:
+
+* AWS VPC CNI deep dive
+* Prefix delegation
+* Network policies
+* Security groups for Pods
+* Load Balancer Controller
+* Service mesh introduction
+* Istio on EKS
+* Advanced ingress patterns
+
+---
+
+# Chapter 28 – EKS Reliability Engineering (SRE)
+
+Topics:
+
+* High availability design
+* Disaster recovery
+* Backup strategies
+* Incident management
+* SLI/SLO/SLA
+* Chaos engineering
+* Reliability testing
+* Production operations
+
+---
+
+# Chapter 29 – EKS Multi-Cluster and Enterprise Architecture
+
+Topics:
+
+* Multi-cluster strategy
+* Multi-region EKS
+* Fleet management
+* Cluster federation concepts
+* Enterprise platform engineering
+* Internal developer platforms
+* Landing zone architecture
+
+---
+
+# Chapter 30 – Real Production Case Studies
+
+Topics:
+
+* E-commerce platform on EKS
+* Banking workload architecture
+* SaaS platform architecture
+* Microservices migration
+* Legacy application modernization
+* Production incident examples
+* Architecture decisions
+
+---
+
+# Chapter 31 – Senior DevOps/SRE Interview Masterclass
+
+Topics:
+
+* Senior EKS interview questions
+* Architecture design questions
+* Troubleshooting scenarios
+* Production outage discussions
+* Kubernetes debugging exercises
+* Leadership-level questions
+
+---
+
+# Chapter 32 – Final EKS Certification & Career Roadmap
+
+Topics:
+
+* Final revision notes
+* CKA preparation alignment
+* AWS DevOps Engineer preparation
+* Resume project explanation
+* Portfolio building
+* DevOps career roadmap
+* Cloud engineer roadmap
+
+---
+
+## Remaining Summary
+
+| Status          |        Chapters |
+| --------------- | --------------: |
+| Completed       |  Chapter 1 – 19 |
+| Remaining       | Chapter 20 – 32 |
+| Remaining Count | **13 Chapters** |
+
+Next time continue from:
+
+**Chapter 20 – Advanced EKS DevOps Toolchain** ✅
