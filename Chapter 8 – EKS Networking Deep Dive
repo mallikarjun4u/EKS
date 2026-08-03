@@ -1,0 +1,1067 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 8 – EKS Networking Deep Dive
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* AWS networking fundamentals for EKS
+* EKS VPC architecture
+* Public and private subnet design
+* Amazon VPC CNI plugin
+* Pod networking
+* Elastic Network Interfaces (ENI)
+* Security Groups
+* Network Policies
+* Kubernetes Services networking
+* AWS Load Balancer Controller
+* Ingress architecture
+* Internal and external load balancing
+* Production EKS networking design
+
+Networking is one of the most important EKS topics because Kubernetes networking and AWS networking work together.
+
+---
+
+# 1. EKS Networking Overview
+
+An EKS cluster uses:
+
+* Amazon VPC
+* Subnets
+* Route Tables
+* Security Groups
+* Elastic Network Interfaces
+* VPC CNI
+
+Architecture:
+
+```text
+                    Internet
+
+                       |
+
+                 Internet Gateway
+
+                       |
+
+              Application Load Balancer
+
+                       |
+
+                  Kubernetes Service
+
+                       |
+
+                    Pods
+
+                       |
+
+              Worker Nodes
+
+                       |
+
+                    AWS VPC
+```
+
+---
+
+# 2. Amazon VPC in EKS
+
+A VPC is a private network where your EKS resources run.
+
+Example:
+
+```text
+VPC: 10.0.0.0/16
+
+
+10.0.0.0
+    |
+    |
+-------------------------
+|                       |
+Public Subnet       Private Subnet
+
+Load Balancer       Worker Nodes
+
+                     Pods
+```
+
+---
+
+# 3. Recommended EKS VPC Design
+
+Production clusters usually use:
+
+* Multiple Availability Zones
+* Public subnets
+* Private subnets
+* NAT Gateway
+* Internet Gateway
+
+Architecture:
+
+```text
+                 Internet
+
+                    |
+
+             Internet Gateway
+
+                    |
+
+        ------------------------
+
+             Public Subnets
+
+          ALB / NAT Gateway
+
+
+        ------------------------
+
+             Private Subnets
+
+
+          EC2 Worker Nodes
+
+          Kubernetes Pods
+
+
+        ------------------------
+```
+
+---
+
+# 4. Public Subnets
+
+Public subnets have a route to the Internet Gateway.
+
+Example route:
+
+```text
+Destination:
+
+0.0.0.0/0
+
+
+Target:
+
+Internet Gateway
+```
+
+Used for:
+
+* Load Balancers
+* NAT Gateways
+* Bastion Hosts
+
+---
+
+# 5. Private Subnets
+
+Private subnets do not directly access the internet.
+
+Example:
+
+```text
+Private EC2
+
+       |
+
+       |
+
+   NAT Gateway
+
+       |
+
+    Internet
+```
+
+Used for:
+
+* Worker Nodes
+* Applications
+* Databases
+
+---
+
+# 6. Availability Zones
+
+Production EKS should span multiple AZs.
+
+Example:
+
+```text
+                VPC
+
+
+       AZ-A              AZ-B
+
+
+ Public Subnet      Public Subnet
+
+ Private Subnet     Private Subnet
+
+
+ Worker Nodes       Worker Nodes
+```
+
+Benefits:
+
+* Fault tolerance
+* High availability
+* Better uptime
+
+---
+
+# 7. AWS VPC CNI Plugin
+
+EKS uses the Amazon VPC CNI plugin.
+
+CNI means:
+
+**Container Network Interface**
+
+It provides networking between:
+
+* Pods
+* Nodes
+* AWS resources
+
+---
+
+Traditional Kubernetes:
+
+```text
+Pod IP
+
+10.244.x.x
+```
+
+AWS EKS:
+
+```text
+Pod IP
+
+10.0.x.x
+
+(Real VPC IP)
+```
+
+---
+
+# 8. How Pod Networking Works
+
+Example:
+
+Worker Node:
+
+```text
+EC2 Instance
+
+10.0.1.10
+```
+
+Pods:
+
+```text
+Pod 1
+
+10.0.1.20
+
+
+Pod 2
+
+10.0.1.21
+```
+
+Traffic:
+
+```text
+Pod
+
+↓
+
+AWS Network
+
+↓
+
+Another Pod
+```
+
+---
+
+# 9. Elastic Network Interface (ENI)
+
+An ENI is a virtual network card.
+
+Each EC2 instance has:
+
+```text
+EC2 Node
+
+|
+
+Primary ENI
+
+|
+
+Secondary ENIs
+
+|
+
+Pod IP Addresses
+```
+
+---
+
+Example:
+
+```text
+Worker Node
+
+
+eth0
+
+10.0.1.10
+
+
+eth1
+
+10.0.1.20
+
+
+eth2
+
+10.0.1.21
+```
+
+---
+
+# 10. ENI Limits
+
+Every EC2 instance has limits:
+
+* Number of ENIs
+* Number of IP addresses per ENI
+
+Example:
+
+Small instance:
+
+```text
+Few ENIs
+
+Few Pods
+```
+
+Large instance:
+
+```text
+More ENIs
+
+More Pods
+```
+
+This affects EKS node sizing.
+
+---
+
+# 11. Prefix Delegation
+
+VPC CNI supports prefix delegation.
+
+Instead of assigning individual IPs:
+
+```text
+Old:
+
+ENI
+
+IP
+IP
+IP
+```
+
+New:
+
+```text
+ENI
+
+Prefix
+
+10.0.1.0/28
+```
+
+Benefits:
+
+* More Pod IP capacity
+* Faster scaling
+
+---
+
+# 12. Security Groups
+
+Security Groups act as firewalls.
+
+They control:
+
+* Incoming traffic
+* Outgoing traffic
+
+Example:
+
+Worker Node Security Group:
+
+Allow:
+
+```text
+Source:
+
+Load Balancer
+
+
+Port:
+
+80
+443
+```
+
+---
+
+# 13. Security Group Flow
+
+Example:
+
+User accessing application:
+
+```text
+User
+
+↓
+
+ALB Security Group
+
+↓
+
+Node Security Group
+
+↓
+
+Pod
+```
+
+---
+
+# 14. Security Group Best Practices
+
+Avoid:
+
+```text
+Allow:
+
+0.0.0.0/0
+
+All ports
+```
+
+Prefer:
+
+```text
+Allow:
+
+Specific source
+
+Specific port
+```
+
+---
+
+# 15. Kubernetes Networking Model
+
+Kubernetes networking has three main requirements:
+
+## Requirement 1
+
+Every Pod gets an IP.
+
+Example:
+
+```text
+Pod A
+
+10.0.1.20
+```
+
+---
+
+## Requirement 2
+
+Pods communicate directly.
+
+Example:
+
+```text
+Pod A
+
+↓
+
+Pod B
+```
+
+---
+
+## Requirement 3
+
+Containers inside a Pod share networking.
+
+Example:
+
+```text
+Pod
+
+10.0.1.20
+
+|
+
+Container A
+
+Container B
+```
+
+---
+
+# 16. Kubernetes Service Networking
+
+Pods are temporary.
+
+Example:
+
+```text
+Pod
+
+10.0.1.20
+
+
+Restart
+
+
+Pod
+
+10.0.1.30
+```
+
+Service provides stable access.
+
+Architecture:
+
+```text
+Client
+
+↓
+
+Service IP
+
+↓
+
+Pod IP
+```
+
+---
+
+# 17. Service Types in EKS
+
+## ClusterIP
+
+Internal communication.
+
+Example:
+
+```text
+Frontend Pod
+
+↓
+
+Backend Service
+
+↓
+
+Backend Pod
+```
+
+---
+
+## NodePort
+
+Exposes application through node port.
+
+Example:
+
+```text
+Node IP
+
++
+
+Port 30080
+```
+
+Usually not used directly in production.
+
+---
+
+## LoadBalancer
+
+Creates AWS Load Balancer.
+
+Flow:
+
+```text
+Internet
+
+↓
+
+AWS Load Balancer
+
+↓
+
+Service
+
+↓
+
+Pods
+```
+
+---
+
+# 18. AWS Load Balancer Controller
+
+The AWS Load Balancer Controller connects Kubernetes with AWS load balancing.
+
+It creates:
+
+* Application Load Balancer
+* Network Load Balancer
+
+Based on:
+
+* Services
+* Ingress resources
+
+---
+
+Architecture:
+
+```text
+Kubernetes Ingress
+
+          |
+
+          |
+
+AWS Load Balancer Controller
+
+          |
+
+          |
+
+Application Load Balancer
+```
+
+---
+
+# 19. Installing AWS Load Balancer Controller
+
+High-level steps:
+
+1. Create IAM policy
+2. Create IAM role
+3. Configure IRSA
+4. Install Helm chart
+5. Deploy controller
+
+---
+
+# 20. Ingress
+
+Ingress manages HTTP/HTTPS routing.
+
+Example:
+
+Without Ingress:
+
+```text
+Application A
+
+↓
+
+Load Balancer
+
+
+Application B
+
+↓
+
+Load Balancer
+```
+
+Cost increases.
+
+---
+
+With Ingress:
+
+```text
+                Internet
+
+                    |
+
+              ALB Ingress
+
+
+          /api        /web
+
+
+        Backend     Frontend
+```
+
+---
+
+# 21. Ingress Example
+
+```yaml
+apiVersion: networking.k8s.io/v1
+
+kind: Ingress
+
+metadata:
+
+  name: app-ingress
+
+
+spec:
+
+  rules:
+
+  - host: example.com
+
+    http:
+
+      paths:
+
+      - path: /
+
+        backend:
+
+          service:
+
+            name: frontend
+
+            port:
+
+              number: 80
+```
+
+---
+
+# 22. Internal Load Balancer
+
+For private applications:
+
+Example:
+
+```text
+Internal Users
+
+↓
+
+Internal ALB
+
+↓
+
+Private Pods
+```
+
+Used for:
+
+* Internal APIs
+* Backend services
+* Admin applications
+
+---
+
+# 23. External Load Balancer
+
+For internet-facing applications:
+
+```text
+Internet Users
+
+↓
+
+Public ALB
+
+↓
+
+Application Pods
+```
+
+---
+
+# 24. Network Policies
+
+Network Policies control Pod-to-Pod communication.
+
+Default:
+
+```text
+All Pods communicate
+```
+
+After policy:
+
+```text
+Frontend
+
+     ✔
+
+Backend
+
+
+Frontend
+
+     ✘
+
+Database
+```
+
+---
+
+# 25. DNS in EKS
+
+EKS uses CoreDNS.
+
+Example:
+
+Instead of:
+
+```text
+10.0.2.25
+```
+
+Applications use:
+
+```text
+database.default.svc.cluster.local
+```
+
+---
+
+# 26. CoreDNS Flow
+
+```text
+Application
+
+↓
+
+CoreDNS
+
+↓
+
+Service IP
+
+↓
+
+Pod
+```
+
+---
+
+# 27. EKS Networking Troubleshooting
+
+## Check Pod IP
+
+```bash
+kubectl get pods -o wide
+```
+
+---
+
+## Check Services
+
+```bash
+kubectl get svc
+```
+
+---
+
+## Check Endpoints
+
+```bash
+kubectl get endpoints
+```
+
+---
+
+## Check DNS
+
+Enter Pod:
+
+```bash
+kubectl exec -it pod-name -- bash
+```
+
+Test:
+
+```bash
+nslookup kubernetes.default
+```
+
+---
+
+## Check Network Policies
+
+```bash
+kubectl get networkpolicy
+```
+
+---
+
+# 28. Common Networking Problems
+
+## Problem: Pod cannot access internet
+
+Check:
+
+* NAT Gateway
+* Route tables
+* Security groups
+
+---
+
+## Problem: Service has no endpoints
+
+Check:
+
+```bash
+kubectl get endpoints
+```
+
+Possible cause:
+
+* Label mismatch
+* Pods not ready
+
+---
+
+## Problem: Load Balancer not created
+
+Check:
+
+* AWS Load Balancer Controller
+* IAM permissions
+* Subnet tags
+
+---
+
+# 29. Production EKS Network Architecture
+
+Recommended design:
+
+```text
+                         Users
+
+                           |
+
+                       Route 53
+
+                           |
+
+                 Application Load Balancer
+
+                           |
+
+                        Ingress
+
+                           |
+
+                        Service
+
+                           |
+
+        --------------------------------
+
+        Private Subnets
+
+        EKS Worker Nodes
+
+
+        Pod     Pod     Pod
+
+
+        --------------------------------
+
+
+                 NAT Gateway
+
+
+                 Internet Gateway
+```
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ EKS VPC design
+✅ Public/private subnets
+✅ Availability Zones
+✅ AWS VPC CNI
+✅ Pod networking
+✅ ENI concepts
+✅ Security Groups
+✅ Kubernetes Services
+✅ Load Balancers
+✅ AWS Load Balancer Controller
+✅ Ingress
+✅ DNS
+✅ Network Policies
+✅ Troubleshooting
+
+---
+
+# Hands-on Lab
+
+Practice:
+
+1. Create an EKS cluster with private worker nodes.
+2. Deploy nginx.
+3. Create ClusterIP service.
+4. Create LoadBalancer service.
+5. Install AWS Load Balancer Controller.
+6. Create Ingress.
+7. Test external and internal access.
+8. Add Network Policies.
+
+---
+
+# Next Chapter
+
+# Chapter 9 – EKS Storage Deep Dive
+
+Topics:
+
+* Kubernetes storage architecture
+* AWS EBS CSI Driver
+* AWS EFS CSI Driver
+* Storage Classes
+* Dynamic provisioning
+* Persistent Volumes
+* Persistent Volume Claims
+* Stateful applications on EKS
+* Database deployment patterns
+* Backup strategies
+
+This chapter explains how production applications store data in EKS.
