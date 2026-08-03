@@ -1,0 +1,1015 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 7 – Amazon EKS Architecture and Cluster Creation
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* What Amazon EKS is
+* EKS architecture
+* EKS control plane
+* Worker node options
+* Managed Node Groups
+* Self-managed nodes
+* AWS Fargate
+* EKS networking
+* IAM integration
+* Installing EKS tools
+* Creating an EKS cluster
+* Connecting kubectl
+* Deploying your first application
+
+---
+
+# 1. What is Amazon EKS?
+
+Amazon Elastic Kubernetes Service (EKS) is a managed Kubernetes service provided by AWS.
+
+It allows you to run Kubernetes clusters without manually managing the Kubernetes control plane.
+
+Traditional Kubernetes:
+
+```text
+You manage:
+
+Control Plane
+
++
+
+Worker Nodes
+
++
+
+Networking
+
++
+
+Upgrades
+```
+
+Amazon EKS:
+
+```text
+AWS manages:
+
+Control Plane
+
+
+You manage:
+
+Worker Nodes
+
+Applications
+
+Configurations
+```
+
+---
+
+# 2. Why Use EKS?
+
+Organizations use EKS because it provides:
+
+* Managed Kubernetes control plane
+* High availability
+* AWS service integration
+* IAM security
+* VPC networking
+* Load balancer integration
+* CloudWatch monitoring
+* Enterprise support
+
+---
+
+# 3. EKS Architecture Overview
+
+A typical EKS cluster:
+
+```text
+                    Users
+
+                      |
+
+                  kubectl
+
+                      |
+
+              EKS Control Plane
+
+          -------------------------
+
+          API Server
+
+          Scheduler
+
+          Controller Manager
+
+          etcd
+
+
+                      |
+
+          -------------------------
+
+              Worker Nodes
+
+
+          EC2 Instance  EC2 Instance
+
+
+                |             |
+
+              Pods          Pods
+
+          -------------------------
+
+                 AWS VPC
+```
+
+---
+
+# 4. EKS Control Plane
+
+AWS manages the Kubernetes control plane.
+
+It contains:
+
+* Kubernetes API Server
+* Scheduler
+* Controller Manager
+* etcd database
+
+---
+
+## API Server
+
+Entry point for Kubernetes operations.
+
+Example:
+
+```bash
+kubectl get pods
+```
+
+Flow:
+
+```text
+kubectl
+
+↓
+
+EKS API Server
+
+↓
+
+Cluster State
+```
+
+---
+
+## etcd
+
+Stores Kubernetes cluster information.
+
+Examples:
+
+* Pods
+* Nodes
+* Services
+* Secrets
+* Configurations
+
+AWS manages:
+
+* Availability
+* Backup
+* Replication
+
+---
+
+# 5. EKS Worker Nodes
+
+Worker nodes run your applications.
+
+Options:
+
+1. Managed Node Groups
+2. Self-managed Nodes
+3. AWS Fargate
+
+---
+
+# 6. Managed Node Groups
+
+AWS manages the EC2 worker nodes.
+
+AWS handles:
+
+* Instance creation
+* Auto Scaling Group
+* Node updates
+* AMI updates
+
+Architecture:
+
+```text
+EKS Cluster
+
+       |
+
+Managed Node Group
+
+       |
+
+Auto Scaling Group
+
+       |
+
+EC2 Instances
+
+       |
+
+Pods
+```
+
+---
+
+## Advantages
+
+* Easy setup
+* Automatic updates
+* AWS-supported configuration
+* Less maintenance
+
+Recommended for most users.
+
+---
+
+# 7. Self-Managed Nodes
+
+You manage worker nodes yourself.
+
+You control:
+
+* EC2 instances
+* AMI
+* Auto Scaling
+* Updates
+* Bootstrap configuration
+
+Architecture:
+
+```text
+You
+
+↓
+
+EC2 Instances
+
+↓
+
+Kubernetes Nodes
+
+↓
+
+Pods
+```
+
+Used when:
+
+* Custom AMIs required
+* Special configurations needed
+
+---
+
+# 8. AWS Fargate for EKS
+
+Fargate runs Kubernetes Pods without managing servers.
+
+Architecture:
+
+```text
+Pod
+
+↓
+
+AWS Fargate
+
+↓
+
+AWS Infrastructure
+```
+
+You do not manage:
+
+* EC2 instances
+* Operating systems
+* Node scaling
+
+---
+
+## Fargate Benefits
+
+* Serverless Kubernetes
+* No node management
+* Automatic scaling
+
+---
+
+## Fargate Limitations
+
+Not suitable for every workload.
+
+Limitations include:
+
+* Certain DaemonSets cannot run
+* Less node-level control
+* Some networking constraints
+
+---
+
+# 9. EKS Networking
+
+EKS uses AWS VPC networking.
+
+Components:
+
+```text
+VPC
+
+|
+
+Subnets
+
+|
+
+Security Groups
+
+|
+
+Elastic Network Interfaces
+
+|
+
+Pods
+```
+
+---
+
+# 10. EKS Recommended VPC Design
+
+Production architecture:
+
+```text
+                 Internet
+
+                    |
+
+              Load Balancer
+
+                    |
+
+        -------------------------
+
+        Public Subnets
+
+
+        -------------------------
+
+        Private Subnets
+
+
+        EC2 Worker Nodes
+
+        Pods
+```
+
+---
+
+# 11. Availability Zones
+
+Production clusters should use multiple AZs.
+
+Example:
+
+```text
+VPC
+
+|
+
+├── AZ-A
+
+│    └── Worker Nodes
+
+│
+
+├── AZ-B
+
+│    └── Worker Nodes
+
+│
+
+└── AZ-C
+
+     └── Worker Nodes
+```
+
+Benefits:
+
+* Fault tolerance
+* High availability
+
+---
+
+# 12. Amazon VPC CNI
+
+EKS uses the AWS VPC CNI plugin.
+
+It allows Pods to receive VPC IP addresses.
+
+Example:
+
+```text
+Worker Node
+
+10.0.1.10
+
+
+Pod
+
+10.0.1.20
+
+
+Pod
+
+10.0.1.30
+```
+
+Pods communicate using AWS networking.
+
+---
+
+# 13. Security Groups in EKS
+
+Security Groups control network access.
+
+Example:
+
+Worker node security group:
+
+Allow:
+
+```text
+HTTPS
+
+443
+
+From Load Balancer
+```
+
+Allow:
+
+```text
+Kubernetes API
+
+443
+
+From Admin Network
+```
+
+---
+
+# 14. IAM Integration with EKS
+
+EKS uses AWS IAM for authentication.
+
+Flow:
+
+```text
+User
+
+↓
+
+IAM Authentication
+
+↓
+
+Kubernetes RBAC
+
+↓
+
+Permission Granted
+```
+
+---
+
+# 15. IAM Roles for Service Accounts (IRSA)
+
+IRSA allows Kubernetes Pods to use AWS permissions securely.
+
+Without IRSA:
+
+```text
+Application
+
+↓
+
+AWS Access Keys
+
+↓
+
+S3
+```
+
+Problem:
+
+Credentials stored inside application.
+
+---
+
+With IRSA:
+
+```text
+Pod
+
+↓
+
+Service Account
+
+↓
+
+IAM Role
+
+↓
+
+AWS Service
+```
+
+Example:
+
+A Pod needs S3 access:
+
+```text
+Application Pod
+
+↓
+
+IAM Role
+
+↓
+
+Amazon S3
+```
+
+---
+
+# 16. EKS Tools Installation
+
+Required tools:
+
+* AWS CLI
+* kubectl
+* eksctl
+
+---
+
+# 17. AWS CLI
+
+Verify:
+
+```bash
+aws --version
+```
+
+Configure:
+
+```bash
+aws configure
+```
+
+Provide:
+
+```text
+Access Key
+
+Secret Key
+
+Region
+
+Output Format
+```
+
+Test:
+
+```bash
+aws sts get-caller-identity
+```
+
+---
+
+# 18. kubectl
+
+kubectl manages Kubernetes clusters.
+
+Check:
+
+```bash
+kubectl version
+```
+
+Example:
+
+```bash
+kubectl get nodes
+```
+
+---
+
+# 19. eksctl
+
+eksctl is a command-line tool for creating EKS clusters.
+
+It simplifies:
+
+* VPC creation
+* Node groups
+* IAM setup
+* Cluster configuration
+
+Check:
+
+```bash
+eksctl version
+```
+
+---
+
+# 20. Creating Your First EKS Cluster
+
+Example:
+
+```bash
+eksctl create cluster \
+--name demo-cluster \
+--region ap-south-1 \
+--nodegroup-name workers \
+--node-type t3.medium \
+--nodes 2
+```
+
+This creates:
+
+```text
+EKS Cluster
+
+|
+
+Control Plane
+
+|
+
+Worker Nodes
+
+|
+
+Pods
+```
+
+---
+
+# 21. Verify Cluster
+
+Check nodes:
+
+```bash
+kubectl get nodes
+```
+
+Example:
+
+```text
+NAME
+
+ip-10-0-1-20
+
+ip-10-0-2-30
+```
+
+---
+
+Check namespaces:
+
+```bash
+kubectl get namespaces
+```
+
+---
+
+Check system Pods:
+
+```bash
+kubectl get pods -A
+```
+
+---
+
+# 22. Deploy Your First Application
+
+Create nginx deployment:
+
+```bash
+kubectl create deployment nginx \
+--image=nginx
+```
+
+---
+
+Check:
+
+```bash
+kubectl get deployment
+```
+
+---
+
+View Pods:
+
+```bash
+kubectl get pods
+```
+
+Example:
+
+```text
+nginx-abc123
+
+Running
+```
+
+---
+
+# 23. Expose Application
+
+Create Service:
+
+```bash
+kubectl expose deployment nginx \
+--type=LoadBalancer \
+--port=80
+```
+
+Check:
+
+```bash
+kubectl get service
+```
+
+Output:
+
+```text
+EXTERNAL-IP
+
+xxxxx.elb.amazonaws.com
+```
+
+Traffic flow:
+
+```text
+User
+
+↓
+
+AWS Load Balancer
+
+↓
+
+Service
+
+↓
+
+Pod
+
+↓
+
+Nginx
+```
+
+---
+
+# 24. EKS Cluster Components
+
+A running EKS cluster contains:
+
+```text
+EKS
+
+├── Control Plane
+│
+├── Worker Nodes
+│
+├── kube-system Pods
+│
+├── CoreDNS
+│
+├── kube-proxy
+│
+└── AWS VPC CNI
+```
+
+---
+
+# 25. CoreDNS
+
+Provides Kubernetes DNS.
+
+Example:
+
+Instead of:
+
+```text
+10.0.1.25
+```
+
+Applications use:
+
+```text
+database.default.svc.cluster.local
+```
+
+---
+
+# 26. kube-proxy
+
+Handles service networking.
+
+Example:
+
+```text
+Service IP
+
+↓
+
+Pod IP
+```
+
+---
+
+# 27. EKS Production Architecture
+
+Example:
+
+```text
+                 Users
+
+                   |
+
+             Route 53
+
+                   |
+
+          Application Load Balancer
+
+                   |
+
+                Ingress
+
+                   |
+
+                Service
+
+                   |
+
+        --------------------
+
+        EKS Worker Nodes
+
+
+        Pod     Pod     Pod
+
+
+        --------------------
+
+
+              AWS VPC
+
+
+        Private Subnets
+```
+
+---
+
+# 28. Common EKS Commands
+
+List clusters:
+
+```bash
+eksctl get cluster
+```
+
+---
+
+Update kubeconfig:
+
+```bash
+aws eks update-kubeconfig \
+--name demo-cluster
+```
+
+---
+
+View nodes:
+
+```bash
+kubectl get nodes
+```
+
+---
+
+View all resources:
+
+```bash
+kubectl get all
+```
+
+---
+
+Cluster information:
+
+```bash
+kubectl cluster-info
+```
+
+---
+
+# 29. Deleting EKS Cluster
+
+Remove cluster:
+
+```bash
+eksctl delete cluster \
+--name demo-cluster
+```
+
+Always delete unused clusters to avoid AWS charges.
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ What EKS is
+✅ EKS architecture
+✅ Control Plane
+✅ Worker Nodes
+✅ Managed Node Groups
+✅ Self-managed Nodes
+✅ Fargate
+✅ VPC CNI
+✅ EKS Networking
+✅ IAM Authentication
+✅ IRSA
+✅ eksctl
+✅ kubectl
+✅ Creating an EKS cluster
+✅ Deploying applications
+
+---
+
+# Hands-on Lab
+
+Complete:
+
+1. Install AWS CLI.
+2. Install kubectl.
+3. Install eksctl.
+4. Create an EKS cluster.
+5. Connect using kubectl.
+6. Deploy nginx.
+7. Create LoadBalancer service.
+8. Access application.
+9. Delete cluster.
+
+---
+
+# Next Chapter
+
+# Chapter 8 – EKS Networking Deep Dive
+
+Topics:
+
+* VPC architecture for EKS
+* Public vs private subnets
+* AWS VPC CNI
+* Pod networking
+* ENI allocation
+* Security Groups
+* Network Policies
+* Load Balancers
+* AWS Load Balancer Controller
+* Ingress
+* Internal and external applications
+* Production networking design
+
+This chapter covers one of the most important EKS production skills: **networking.**
