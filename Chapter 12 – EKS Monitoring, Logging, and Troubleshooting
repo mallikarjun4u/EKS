@@ -1,0 +1,1177 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 12 – EKS Monitoring, Logging, and Troubleshooting
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* Why monitoring is important in EKS
+* Kubernetes monitoring architecture
+* Metrics collection
+* Amazon CloudWatch integration
+* Container Insights
+* Prometheus and Grafana
+* Kubernetes logs
+* Fluent Bit
+* Alerting systems
+* Debugging Pods
+* Debugging Nodes
+* Debugging Networking
+* Debugging Storage
+* Production troubleshooting workflow
+
+Monitoring is essential because running Kubernetes is not only about deploying applications; you must also observe, maintain, and troubleshoot them.
+
+---
+
+# 1. Why Monitor EKS?
+
+A production Kubernetes cluster contains many components:
+
+```text id="n1y7r4"
+Users
+
+ |
+
+Load Balancer
+
+ |
+
+Ingress
+
+ |
+
+Services
+
+ |
+
+Pods
+
+ |
+
+Containers
+
+ |
+
+Worker Nodes
+
+ |
+
+AWS Infrastructure
+```
+
+Problems can happen anywhere:
+
+* Application errors
+* High CPU usage
+* Memory exhaustion
+* Node failures
+* Network issues
+* Storage failures
+
+Monitoring helps answer:
+
+* Is the application healthy?
+* Are users experiencing failures?
+* Which component is causing problems?
+* When did the issue start?
+
+---
+
+# 2. Three Pillars of Observability
+
+Modern monitoring uses three main pillars:
+
+## 1. Metrics
+
+Numbers showing system health.
+
+Examples:
+
+* CPU usage
+* Memory usage
+* Request count
+* Error rate
+
+---
+
+## 2. Logs
+
+Detailed event information.
+
+Examples:
+
+* Application errors
+* Login failures
+* Container output
+
+---
+
+## 3. Traces
+
+Track requests across services.
+
+Example:
+
+```text id="t1p9w0"
+User Request
+
+↓
+
+Frontend
+
+↓
+
+Backend
+
+↓
+
+Database
+```
+
+---
+
+# 3. EKS Monitoring Architecture
+
+Typical production monitoring:
+
+```text id="2y4x8p"
+                Applications
+
+                     |
+
+                  Pods
+
+                     |
+
+              Metrics Collection
+
+                     |
+
+        ----------------------------
+
+        Prometheus
+
+        CloudWatch
+
+        Grafana
+
+        Alert Manager
+
+        ----------------------------
+
+                     |
+
+                Dashboard
+```
+
+---
+
+# 4. Kubernetes Metrics Types
+
+Kubernetes has different metrics:
+
+## Node Metrics
+
+Information about worker nodes.
+
+Examples:
+
+* CPU
+* Memory
+* Disk
+
+---
+
+## Pod Metrics
+
+Information about Pods.
+
+Examples:
+
+* CPU consumption
+* Memory usage
+* Restart count
+
+---
+
+## Application Metrics
+
+Application-specific data.
+
+Examples:
+
+* Requests per second
+* Response time
+* Errors
+
+---
+
+# 5. Metrics Server
+
+Metrics Server collects resource usage data.
+
+Used by:
+
+* kubectl top
+* Horizontal Pod Autoscaler
+
+Architecture:
+
+```text id="h0c1wq"
+Worker Nodes
+
+     |
+
+kubelet Metrics
+
+     |
+
+Metrics Server
+
+     |
+
+kubectl top
+```
+
+---
+
+Install check:
+
+```bash
+kubectl get pods -n kube-system
+```
+
+---
+
+View node usage:
+
+```bash
+kubectl top nodes
+```
+
+Example:
+
+```text
+NAME             CPU    MEMORY
+
+node-1           40%    60%
+```
+
+---
+
+View Pod usage:
+
+```bash
+kubectl top pods
+```
+
+---
+
+# 6. Amazon CloudWatch for EKS
+
+Amazon CloudWatch provides monitoring for AWS workloads.
+
+EKS integration provides:
+
+* Logs
+* Metrics
+* Dashboards
+* Alerts
+
+Architecture:
+
+```text
+EKS Cluster
+
+     |
+
+CloudWatch Agent
+
+     |
+
+CloudWatch
+
+     |
+
+Dashboards / Alerts
+```
+
+---
+
+# 7. CloudWatch Container Insights
+
+Container Insights monitors:
+
+* Nodes
+* Pods
+* Containers
+* Applications
+
+Collects:
+
+* CPU
+* Memory
+* Network
+* Disk usage
+
+Architecture:
+
+```text
+Kubernetes Cluster
+
+       |
+
+CloudWatch Agent
+
+       |
+
+Container Insights
+
+       |
+
+CloudWatch Console
+```
+
+---
+
+# 8. Enabling EKS Container Insights
+
+High-level steps:
+
+1. Install CloudWatch agent.
+2. Configure Fluent Bit.
+3. Enable Container Insights.
+4. View metrics in AWS Console.
+
+---
+
+Check monitoring Pods:
+
+```bash
+kubectl get pods -n amazon-cloudwatch
+```
+
+---
+
+# 9. Prometheus
+
+Prometheus is an open-source monitoring system.
+
+It collects time-series metrics.
+
+Example:
+
+```text
+CPU Usage
+
+10:00 → 40%
+
+10:05 → 55%
+
+10:10 → 70%
+```
+
+---
+
+Architecture:
+
+```text
+Applications
+
+     |
+
+Metrics Endpoint
+
+     |
+
+Prometheus
+
+     |
+
+Storage
+
+     |
+
+Grafana
+```
+
+---
+
+# 10. Prometheus Metrics Example
+
+Application exposes:
+
+```
+/metrics
+```
+
+Example:
+
+```text
+http_requests_total 5000
+
+http_errors_total 20
+```
+
+Prometheus collects these values.
+
+---
+
+# 11. Grafana
+
+Grafana creates dashboards.
+
+Example dashboard:
+
+```text
+--------------------------------
+
+CPU Usage       65%
+
+Memory          70%
+
+Requests        500/sec
+
+Errors          2%
+
+--------------------------------
+```
+
+---
+
+Architecture:
+
+```text
+Prometheus
+
+    |
+
+    |
+
+Grafana
+
+    |
+
+Dashboard
+```
+
+---
+
+# 12. Prometheus + Grafana on EKS
+
+Common installation:
+
+* Prometheus Operator
+* kube-prometheus-stack
+* Helm charts
+
+Example:
+
+```bash
+helm install monitoring \
+prometheus-community/kube-prometheus-stack
+```
+
+---
+
+# 13. Kubernetes Logging Architecture
+
+Application logs flow:
+
+```text
+Container
+
+    |
+
+stdout/stderr
+
+    |
+
+Node Log Files
+
+    |
+
+Log Collector
+
+    |
+
+Storage System
+
+    |
+
+Search Dashboard
+```
+
+---
+
+# 14. Container Logs
+
+View logs:
+
+```bash
+kubectl logs pod-name
+```
+
+Example:
+
+```bash
+kubectl logs nginx-pod
+```
+
+---
+
+Follow logs:
+
+```bash
+kubectl logs -f pod-name
+```
+
+---
+
+Multiple containers:
+
+```bash
+kubectl logs pod-name \
+-c container-name
+```
+
+---
+
+# 15. Fluent Bit
+
+Fluent Bit is a lightweight log collector.
+
+Used in EKS for:
+
+* Collecting container logs
+* Sending logs to CloudWatch
+* Processing logs
+
+Architecture:
+
+```text
+Pods
+
+ |
+
+Container Logs
+
+ |
+
+Fluent Bit
+
+ |
+
+CloudWatch Logs
+```
+
+---
+
+# 16. Log Destinations
+
+Common destinations:
+
+* CloudWatch Logs
+* Elasticsearch
+* OpenSearch
+* S3
+
+---
+
+Example:
+
+```text
+Application
+
+↓
+
+Fluent Bit
+
+↓
+
+CloudWatch
+
+↓
+
+Search / Alerts
+```
+
+---
+
+# 17. Kubernetes Events
+
+Events show cluster activity.
+
+Example:
+
+* Pod created
+* Image pull failed
+* Node unavailable
+
+Command:
+
+```bash
+kubectl get events
+```
+
+---
+
+Sort events:
+
+```bash
+kubectl get events \
+--sort-by=.metadata.creationTimestamp
+```
+
+---
+
+# 18. Health Checks
+
+Kubernetes uses probes:
+
+## Liveness Probe
+
+Checks:
+
+"Is the application alive?"
+
+Failure:
+
+```text
+Restart Container
+```
+
+---
+
+## Readiness Probe
+
+Checks:
+
+"Can traffic reach this application?"
+
+Failure:
+
+```text
+Remove from Service
+```
+
+---
+
+## Startup Probe
+
+For slow applications.
+
+---
+
+# 19. Alerting
+
+Monitoring without alerts is incomplete.
+
+Examples:
+
+Alert when:
+
+* CPU > 80%
+* Memory > 90%
+* Pod restart increases
+* Node becomes unavailable
+
+---
+
+Alert architecture:
+
+```text
+Metrics
+
+ |
+
+Prometheus
+
+ |
+
+Alert Manager
+
+ |
+
+Notification
+
+ |
+
+Email / Slack / PagerDuty
+```
+
+---
+
+# 20. Horizontal Pod Autoscaler (HPA)
+
+Automatically scales Pods.
+
+Example:
+
+Current:
+
+```text
+3 Pods
+```
+
+CPU increases:
+
+```text
+CPU > 80%
+```
+
+Kubernetes:
+
+```text
+5 Pods
+```
+
+---
+
+Example:
+
+```bash
+kubectl autoscale deployment nginx \
+--cpu-percent=70 \
+--min=2 \
+--max=10
+```
+
+---
+
+# 21. Vertical Pod Autoscaler (VPA)
+
+Adjusts Pod resource requests.
+
+Example:
+
+Before:
+
+```text
+CPU request:
+
+500m
+```
+
+After analysis:
+
+```text
+CPU request:
+
+1000m
+```
+
+---
+
+# 22. Cluster Autoscaler
+
+Scales worker nodes.
+
+Example:
+
+Pods cannot schedule:
+
+```text
+Not enough CPU
+```
+
+Cluster Autoscaler:
+
+```text
+Add EC2 Node
+```
+
+---
+
+Architecture:
+
+```text
+Pods
+
+ |
+
+Scheduler
+
+ |
+
+Cluster Autoscaler
+
+ |
+
+EC2 Auto Scaling Group
+```
+
+---
+
+# 23. Troubleshooting Methodology
+
+Production troubleshooting approach:
+
+```text
+1. Identify problem
+
+↓
+
+2. Check symptoms
+
+↓
+
+3. Check logs
+
+↓
+
+4. Check events
+
+↓
+
+5. Check metrics
+
+↓
+
+6. Fix root cause
+```
+
+---
+
+# 24. Pod Troubleshooting
+
+## Check Pods
+
+```bash
+kubectl get pods
+```
+
+---
+
+## Detailed Information
+
+```bash
+kubectl describe pod pod-name
+```
+
+Look for:
+
+* Events
+* Errors
+* Scheduling issues
+
+---
+
+## Pod Logs
+
+```bash
+kubectl logs pod-name
+```
+
+---
+
+# 25. Common Pod Problems
+
+## CrashLoopBackOff
+
+Meaning:
+
+Container starts and crashes repeatedly.
+
+Check:
+
+```bash
+kubectl logs pod-name
+```
+
+Possible causes:
+
+* Application error
+* Wrong configuration
+* Missing secret
+
+---
+
+## ImagePullBackOff
+
+Meaning:
+
+Kubernetes cannot download image.
+
+Check:
+
+```bash
+kubectl describe pod pod-name
+```
+
+Possible causes:
+
+* Wrong image name
+* Private registry permission
+* Image does not exist
+
+---
+
+## Pending Pod
+
+Meaning:
+
+Pod cannot be scheduled.
+
+Check:
+
+```bash
+kubectl describe pod pod-name
+```
+
+Possible causes:
+
+* Not enough CPU
+* Node selector issue
+* Taints
+
+---
+
+# 26. Node Troubleshooting
+
+Check nodes:
+
+```bash
+kubectl get nodes
+```
+
+---
+
+Detailed:
+
+```bash
+kubectl describe node node-name
+```
+
+---
+
+Check resources:
+
+```bash
+kubectl top nodes
+```
+
+---
+
+Common issues:
+
+* Disk pressure
+* Memory pressure
+* Network problems
+
+---
+
+# 27. Networking Troubleshooting
+
+Check services:
+
+```bash
+kubectl get svc
+```
+
+---
+
+Check endpoints:
+
+```bash
+kubectl get endpoints
+```
+
+---
+
+Test DNS:
+
+```bash
+nslookup service-name
+```
+
+---
+
+Check Pod connectivity:
+
+```bash
+kubectl exec -it pod-name -- bash
+```
+
+---
+
+# 28. Storage Troubleshooting
+
+Check PVC:
+
+```bash
+kubectl get pvc
+```
+
+---
+
+Check PV:
+
+```bash
+kubectl get pv
+```
+
+---
+
+Describe:
+
+```bash
+kubectl describe pvc pvc-name
+```
+
+Common issues:
+
+* PVC Pending
+* Mount failure
+* CSI driver issue
+
+---
+
+# 29. EKS Useful Debug Commands
+
+## Cluster Information
+
+```bash
+kubectl cluster-info
+```
+
+---
+
+## All Resources
+
+```bash
+kubectl get all -A
+```
+
+---
+
+## System Pods
+
+```bash
+kubectl get pods -n kube-system
+```
+
+---
+
+## Node Information
+
+```bash
+kubectl describe nodes
+```
+
+---
+
+## API Resources
+
+```bash
+kubectl api-resources
+```
+
+---
+
+# 30. Production Monitoring Architecture
+
+Example:
+
+```text
+                     Users
+
+                       |
+
+                 Load Balancer
+
+                       |
+
+                  Applications
+
+                       |
+
+                     Pods
+
+                       |
+
+        ---------------------------------
+
+        Metrics:
+
+        Prometheus
+
+        CloudWatch
+
+
+        Logs:
+
+        Fluent Bit
+
+
+        Dashboards:
+
+        Grafana
+
+
+        Alerts:
+
+        Alert Manager
+
+        ---------------------------------
+```
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ EKS monitoring concepts
+✅ Metrics
+✅ Logs
+✅ CloudWatch Container Insights
+✅ Prometheus
+✅ Grafana
+✅ Fluent Bit
+✅ Kubernetes Events
+✅ Alerting
+✅ Autoscaling
+✅ Pod troubleshooting
+✅ Node troubleshooting
+✅ Network troubleshooting
+✅ Storage troubleshooting
+
+---
+
+# Hands-on Lab
+
+Practice:
+
+1. Install Metrics Server.
+2. View node metrics.
+3. Install Prometheus and Grafana.
+4. Create dashboards.
+5. Configure Fluent Bit.
+6. Send logs to CloudWatch.
+7. Create alerts.
+8. Troubleshoot failed Pods.
+9. Configure HPA.
+
+---
+
+# Next Chapter
+
+# Chapter 13 – EKS Production Architecture and Best Practices
+
+Topics:
+
+* Enterprise EKS architecture
+* Multi-account AWS design
+* Multi-cluster strategy
+* High availability
+* Disaster recovery
+* Cost optimization
+* Security checklist
+* Performance tuning
+* Production readiness checklist
+* EKS interview questions
+
+This chapter combines everything into a real-world production EKS design.
