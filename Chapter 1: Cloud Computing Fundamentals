@@ -1,0 +1,681 @@
+Great. We'll build it as a professional handbook.
+
+# Amazon EKS Zero to Hero (2026 Edition)
+
+## Chapter 1 – Cloud Computing Fundamentals
+
+### Learning Objectives
+
+After completing this chapter, you will understand:
+
+* What cloud computing is
+* Why companies use the cloud
+* Cloud service models (IaaS, PaaS, SaaS)
+* Deployment models
+* Virtualization
+* Regions and Availability Zones
+* High Availability
+* Scalability
+* Load Balancing
+* Disaster Recovery
+* AWS Global Infrastructure
+* Shared Responsibility Model
+
+---
+
+# 1. What is Cloud Computing?
+
+Cloud computing is the delivery of computing resources over the internet instead of owning and maintaining physical hardware.
+
+Instead of buying servers, networking devices, and storage, you rent them on demand.
+
+Traditional approach:
+
+```
+Company
+   │
+   ▼
+Own Data Center
+   │
+   ├── Servers
+   ├── Storage
+   ├── Networking
+   └── Security
+```
+
+Cloud approach:
+
+```
+Company
+   │
+   ▼
+AWS Cloud
+   │
+   ├── Virtual Servers
+   ├── Storage
+   ├── Databases
+   ├── Networking
+   └── Security Services
+```
+
+---
+
+# 2. Why Cloud?
+
+Imagine a startup launching a website.
+
+Without cloud:
+
+* Buy servers
+* Buy networking equipment
+* Rent a data center
+* Install operating systems
+* Configure networking
+* Plan for future growth
+
+This can take weeks or months.
+
+With AWS:
+
+```
+Create EC2 Instance
+↓
+
+Deploy Application
+
+↓
+
+Website Live
+```
+
+Time required:
+
+**5–10 minutes**
+
+---
+
+# 3. Advantages of Cloud Computing
+
+### Cost Savings
+
+Traditional:
+
+```
+Buy 20 Servers
+
+Use only 4
+```
+
+Cloud:
+
+```
+Pay only for what you use
+```
+
+---
+
+### Elasticity
+
+Suppose your application normally has:
+
+```
+100 users
+```
+
+During a sale:
+
+```
+100,000 users
+```
+
+Cloud can automatically add more servers.
+
+After traffic decreases, extra servers are removed.
+
+---
+
+### Global Reach
+
+AWS has infrastructure around the world.
+
+Users connect to the nearest region, reducing latency.
+
+---
+
+### Reliability
+
+If one server fails:
+
+```
+Server A
+
+❌ Down
+
+↓
+
+Server B
+
+Still Running
+```
+
+Applications remain available.
+
+---
+
+# 4. Characteristics of Cloud Computing
+
+* On-demand self-service
+* Broad network access
+* Resource pooling
+* Rapid elasticity
+* Measured service (pay-as-you-go)
+
+---
+
+# 5. Service Models
+
+## IaaS (Infrastructure as a Service)
+
+You manage:
+
+* Operating system
+* Applications
+* Runtime
+* Data
+
+Cloud provider manages:
+
+* Physical servers
+* Networking
+* Storage
+* Virtualization
+
+Examples:
+
+* Amazon EC2
+* Amazon EBS
+
+---
+
+## PaaS (Platform as a Service)
+
+You manage:
+
+* Application code
+* Data
+
+Provider manages:
+
+* OS
+* Runtime
+* Infrastructure
+
+Examples:
+
+* AWS Elastic Beanstalk
+* AWS App Runner
+
+---
+
+## SaaS (Software as a Service)
+
+Users simply use the software.
+
+Examples:
+
+* Gmail
+* Microsoft 365
+* Salesforce
+
+---
+
+# 6. Deployment Models
+
+### Public Cloud
+
+Infrastructure owned by a cloud provider.
+
+Example:
+
+```
+AWS
+Azure
+Google Cloud
+```
+
+---
+
+### Private Cloud
+
+Infrastructure dedicated to one organization.
+
+Used by banks, healthcare, and government organizations.
+
+---
+
+### Hybrid Cloud
+
+Combination of public and private cloud.
+
+Example:
+
+```
+On-Premises Database
+
+↓
+
+AWS Application
+```
+
+---
+
+### Multi-Cloud
+
+Using multiple cloud providers.
+
+Example:
+
+```
+AWS
+
++
+
+Azure
+
++
+
+Google Cloud
+```
+
+---
+
+# 7. Virtualization
+
+Before virtualization:
+
+```
+One Server
+
+↓
+
+One Application
+```
+
+Most hardware remains underutilized.
+
+After virtualization:
+
+```
+One Physical Server
+
+↓
+
+VM1
+
+VM2
+
+VM3
+
+VM4
+```
+
+Multiple virtual machines share the same physical hardware.
+
+---
+
+# 8. Hypervisor
+
+A hypervisor creates and manages virtual machines.
+
+```
+Hardware
+
+↓
+
+Hypervisor
+
+↓
+
+VM1
+
+VM2
+
+VM3
+```
+
+Examples:
+
+* VMware ESXi
+* Microsoft Hyper-V
+* KVM
+
+---
+
+# 9. Containers vs Virtual Machines
+
+Virtual Machines:
+
+```
+Application
+
+↓
+
+Guest OS
+
+↓
+
+Hypervisor
+
+↓
+
+Hardware
+```
+
+Containers:
+
+```
+Application
+
+↓
+
+Container Runtime
+
+↓
+
+Host OS
+
+↓
+
+Hardware
+```
+
+Containers are generally:
+
+* Faster to start
+* Smaller in size
+* More resource-efficient
+
+This is why Kubernetes and Amazon EKS use containers.
+
+---
+
+# 10. AWS Global Infrastructure
+
+AWS infrastructure consists of:
+
+```
+Region
+
+↓
+
+Availability Zone
+
+↓
+
+Data Centers
+```
+
+Example:
+
+```
+Mumbai Region
+
+↓
+
+AZ A
+
+AZ B
+
+AZ C
+```
+
+Each Availability Zone has independent power, networking, and cooling.
+
+---
+
+# 11. Regions
+
+A Region is a geographic area containing multiple Availability Zones.
+
+Examples:
+
+* US East (N. Virginia)
+* Europe (Frankfurt)
+* Asia Pacific (Mumbai)
+* Asia Pacific (Singapore)
+
+Choose a region based on:
+
+* User proximity
+* Compliance requirements
+* Service availability
+* Cost
+
+---
+
+# 12. Availability Zones (AZs)
+
+Each Region contains multiple AZs.
+
+Example:
+
+```
+Mumbai Region
+
+├── AZ-A
+├── AZ-B
+└── AZ-C
+```
+
+If one AZ experiences an outage, applications can continue running in another AZ when designed for high availability.
+
+---
+
+# 13. High Availability (HA)
+
+Example:
+
+```
+Load Balancer
+
+↓
+
+Server 1
+
+Server 2
+
+Server 3
+```
+
+If Server 2 fails:
+
+```
+Traffic
+
+↓
+
+Server 1
+
+Server 3
+```
+
+Users continue accessing the application.
+
+---
+
+# 14. Scalability
+
+### Vertical Scaling
+
+Increase the size of a server.
+
+Example:
+
+```
+2 CPU
+
+↓
+
+8 CPU
+```
+
+---
+
+### Horizontal Scaling
+
+Add more servers.
+
+```
+Server 1
+
++
+
+Server 2
+
++
+
+Server 3
+```
+
+Kubernetes and Amazon EKS primarily support horizontal scaling.
+
+---
+
+# 15. Elasticity
+
+Elasticity automatically adjusts resources based on demand.
+
+```
+Morning
+
+2 Servers
+
+↓
+
+Sale Starts
+
+20 Servers
+
+↓
+
+Sale Ends
+
+2 Servers
+```
+
+This helps optimize cost.
+
+---
+
+# 16. Load Balancing
+
+A Load Balancer distributes traffic across multiple servers.
+
+```
+Users
+
+↓
+
+Load Balancer
+
+↓
+
+Server A
+
+Server B
+
+Server C
+```
+
+Benefits:
+
+* Better performance
+* Fault tolerance
+* High availability
+
+---
+
+# 17. Disaster Recovery (DR)
+
+Disaster Recovery is the ability to restore systems after a major failure.
+
+Common strategies:
+
+* Backup and Restore
+* Pilot Light
+* Warm Standby
+* Multi-site Active/Active
+
+---
+
+# 18. Shared Responsibility Model
+
+AWS is responsible for the **security of the cloud**:
+
+* Physical data centers
+* Hardware
+* Networking
+* Managed infrastructure
+
+Customers are responsible for **security in the cloud**:
+
+* IAM users and permissions
+* Applications
+* Data
+* Operating systems (for EC2)
+* Network configurations
+
+---
+
+# Chapter Summary
+
+In this chapter you learned:
+
+* Cloud computing concepts
+* Benefits of cloud adoption
+* IaaS, PaaS, SaaS
+* Public, Private, Hybrid, and Multi-cloud
+* Virtualization
+* Containers vs Virtual Machines
+* AWS Regions and Availability Zones
+* High Availability
+* Scalability and Elasticity
+* Load Balancing
+* Disaster Recovery
+* Shared Responsibility Model
+
+---
+
+## Hands-on Exercise
+
+1. Create a free AWS account.
+2. Explore the AWS Management Console.
+3. Find:
+
+   * EC2
+   * S3
+   * IAM
+   * VPC
+   * EKS
+4. Locate the Region selector and switch between a few regions to see available services.
+
+### What's Next
+
+**Chapter 2 – AWS Fundamentals** will cover:
+
+* IAM (Users, Groups, Roles, Policies)
+* EC2
+* VPC
+* Subnets
+* Route Tables
+* Internet Gateway
+* NAT Gateway
+* Security Groups
+* Network ACLs
+* Elastic IPs
+* Auto Scaling
+* Elastic Load Balancer
+* CloudWatch
+* EBS and EFS
+
+This chapter lays the AWS foundation you'll need before creating and operating Amazon EKS clusters.
