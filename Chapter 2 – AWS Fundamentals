@@ -1,0 +1,975 @@
+# Amazon EKS Zero to Hero (2026 Edition)
+
+# Chapter 2 – AWS Fundamentals
+
+## Learning Objectives
+
+After completing this chapter, you will understand:
+
+* AWS account structure
+* AWS Identity and Access Management (IAM)
+* Users, Groups, Roles, Policies
+* EC2 fundamentals
+* Amazon Machine Images (AMI)
+* Instance types
+* VPC architecture
+* Subnets
+* Route tables
+* Internet Gateway
+* NAT Gateway
+* Security Groups
+* Network ACLs
+* Elastic IP
+* Load Balancing
+* Auto Scaling
+* Storage services
+* CloudWatch monitoring
+
+These concepts are essential before learning Amazon EKS.
+
+---
+
+# 1. Introduction to AWS
+
+Amazon Web Services (AWS) is a cloud platform that provides hundreds of infrastructure and application services.
+
+AWS services are grouped into categories:
+
+```
+AWS Cloud
+
+├── Compute
+│     ├── EC2
+│     ├── Lambda
+│     └── ECS/EKS
+│
+├── Storage
+│     ├── S3
+│     ├── EBS
+│     └── EFS
+│
+├── Database
+│     ├── RDS
+│     └── DynamoDB
+│
+├── Networking
+│     ├── VPC
+│     ├── Route53
+│     └── Load Balancer
+│
+├── Security
+│     ├── IAM
+│     └── KMS
+│
+└── Monitoring
+      └── CloudWatch
+```
+
+---
+
+# 2. AWS Account
+
+An AWS account is the top-level container for resources.
+
+Example:
+
+```
+AWS Account
+
+|
+├── EC2 Instances
+├── S3 Buckets
+├── VPC Networks
+├── IAM Users
+└── EKS Clusters
+```
+
+Each account has:
+
+* Unique account ID
+* Billing information
+* Security boundaries
+
+---
+
+# 3. AWS Root User
+
+When an AWS account is created, it has a root user.
+
+Root user has unlimited permissions.
+
+Example:
+
+```
+Root User
+
+↓
+
+All AWS Services
+```
+
+Best practice:
+
+* Do not use root for daily work.
+* Enable MFA.
+* Create IAM users or roles.
+
+---
+
+# 4. IAM (Identity and Access Management)
+
+IAM controls:
+
+* Who can access AWS
+* What they can access
+* What actions they can perform
+
+IAM answers:
+
+```
+Who?
+ ↓
+User / Role
+
+Can do what?
+ ↓
+Policy
+
+On which resource?
+ ↓
+AWS Service
+```
+
+---
+
+# 5. IAM Components
+
+## IAM Users
+
+Represents a person or application.
+
+Example:
+
+```
+Developer
+
+↓
+
+IAM User
+
+↓
+
+EC2 Access
+```
+
+---
+
+## IAM Groups
+
+Collection of users.
+
+Example:
+
+```
+Developers Group
+
+├── Alice
+├── Bob
+└── Charlie
+```
+
+Permissions are assigned to the group.
+
+---
+
+## IAM Roles
+
+Temporary permissions.
+
+Mostly used by:
+
+* AWS services
+* Applications
+* Kubernetes Pods
+
+Example:
+
+```
+EKS Pod
+
+↓
+
+IAM Role
+
+↓
+
+S3 Permission
+```
+
+This concept is important for EKS IRSA.
+
+---
+
+# 6. IAM Policies
+
+Policies define permissions.
+
+Example:
+
+Allow EC2 start:
+
+```json
+{
+ "Effect": "Allow",
+ "Action": "ec2:StartInstances",
+ "Resource": "*"
+}
+```
+
+Structure:
+
+```
+Policy
+
+├── Effect
+│     Allow / Deny
+│
+├── Action
+│     API operation
+│
+└── Resource
+      AWS resource
+```
+
+---
+
+# 7. IAM Best Practices
+
+Follow least privilege:
+
+Bad:
+
+```
+AdministratorAccess
+```
+
+Good:
+
+```
+Allow only required actions
+```
+
+Example:
+
+Application needs S3 read access:
+
+Give:
+
+```
+s3:GetObject
+```
+
+Do not give:
+
+```
+*
+```
+
+---
+
+# 8. AWS CLI
+
+AWS CLI allows command-line management.
+
+Install:
+
+```
+aws --version
+```
+
+Configure:
+
+```
+aws configure
+```
+
+Enter:
+
+```
+Access Key ID
+
+Secret Access Key
+
+Region
+
+Output format
+```
+
+Example:
+
+List EC2 instances:
+
+```bash
+aws ec2 describe-instances
+```
+
+---
+
+# 9. Amazon EC2
+
+Amazon Elastic Compute Cloud (EC2) provides virtual servers.
+
+Instead of buying physical machines:
+
+```
+Physical Server
+
+↓
+
+EC2 Instance
+```
+
+---
+
+# 10. EC2 Architecture
+
+```
+EC2 Instance
+
+├── AMI
+├── Instance Type
+├── Storage
+├── Security Group
+└── Network Interface
+```
+
+---
+
+# 11. AMI (Amazon Machine Image)
+
+AMI is a template used to create EC2 instances.
+
+Contains:
+
+* Operating System
+* Software
+* Configuration
+
+Example:
+
+```
+Ubuntu AMI
+
+↓
+
+New EC2 Instance
+
+↓
+
+Ubuntu Server
+```
+
+---
+
+# 12. Instance Types
+
+Instance type defines hardware.
+
+Example:
+
+```
+t3.medium
+
+2 vCPU
+
+4 GB RAM
+```
+
+Categories:
+
+## General Purpose
+
+Balanced CPU and memory.
+
+Examples:
+
+```
+t3
+m7
+```
+
+---
+
+## Compute Optimized
+
+High CPU workloads.
+
+Examples:
+
+```
+c7
+```
+
+---
+
+## Memory Optimized
+
+Databases and caching.
+
+Examples:
+
+```
+r7
+```
+
+---
+
+## GPU Instances
+
+Machine learning.
+
+Examples:
+
+```
+g5
+p5
+```
+
+---
+
+# 13. EC2 Pricing Models
+
+## On-Demand
+
+Pay per hour/second.
+
+Good for:
+
+* Testing
+* Short workloads
+
+---
+
+## Reserved Instances
+
+Commit for 1–3 years.
+
+Lower cost.
+
+---
+
+## Spot Instances
+
+Use unused AWS capacity.
+
+Very cheap.
+
+Can be interrupted.
+
+Common in:
+
+* Kubernetes worker nodes
+* Batch jobs
+
+---
+
+# 14. VPC (Virtual Private Cloud)
+
+VPC is your private network inside AWS.
+
+Think of it as your own data center network.
+
+```
+AWS Cloud
+
+↓
+
+VPC
+
+↓
+
+Subnets
+
+↓
+
+Resources
+```
+
+---
+
+# 15. VPC Components
+
+```
+VPC
+
+├── CIDR Block
+
+├── Subnets
+
+├── Route Tables
+
+├── Internet Gateway
+
+├── NAT Gateway
+
+└── Security Groups
+```
+
+---
+
+# 16. CIDR
+
+Defines IP address range.
+
+Example:
+
+```
+10.0.0.0/16
+```
+
+Provides:
+
+```
+10.0.x.x
+```
+
+addresses.
+
+---
+
+# 17. Subnets
+
+A subnet is a smaller network inside a VPC.
+
+Types:
+
+## Public Subnet
+
+Has internet access.
+
+Example:
+
+```
+Internet
+
+↓
+
+Load Balancer
+
+↓
+
+Public Subnet
+```
+
+---
+
+## Private Subnet
+
+No direct internet access.
+
+Example:
+
+```
+Application Servers
+
+↓
+
+Private Subnet
+```
+
+EKS worker nodes usually run in private subnets.
+
+---
+
+# 18. Availability Zone Design
+
+Production architecture:
+
+```
+VPC
+
+├── AZ-A
+│    ├── Public Subnet
+│    └── Private Subnet
+│
+├── AZ-B
+│    ├── Public Subnet
+│    └── Private Subnet
+│
+└── AZ-C
+     ├── Public Subnet
+     └── Private Subnet
+```
+
+This provides high availability.
+
+---
+
+# 19. Internet Gateway (IGW)
+
+Allows communication between VPC and internet.
+
+Example:
+
+```
+User
+
+↓
+
+Internet
+
+↓
+
+Internet Gateway
+
+↓
+
+Public EC2
+```
+
+---
+
+# 20. NAT Gateway
+
+Allows private resources to access the internet.
+
+Example:
+
+```
+Private EC2
+
+↓
+
+NAT Gateway
+
+↓
+
+Internet
+```
+
+Used for:
+
+* Software updates
+* Package downloads
+* Container image pulls
+
+---
+
+# 21. Route Tables
+
+Route tables decide where network traffic goes.
+
+Example:
+
+Public route:
+
+```
+0.0.0.0/0
+
+↓
+
+Internet Gateway
+```
+
+Private route:
+
+```
+0.0.0.0/0
+
+↓
+
+NAT Gateway
+```
+
+---
+
+# 22. Security Groups
+
+Security groups are virtual firewalls.
+
+They control:
+
+* Incoming traffic
+* Outgoing traffic
+
+Example:
+
+Allow SSH:
+
+```
+Port:22
+
+Source:
+My IP
+```
+
+Allow Web:
+
+```
+Port:80
+
+Source:
+0.0.0.0/0
+```
+
+---
+
+# 23. Network ACL
+
+Network ACL works at subnet level.
+
+Comparison:
+
+| Security Group   | NACL             |
+| ---------------- | ---------------- |
+| Instance level   | Subnet level     |
+| Stateful         | Stateless        |
+| Allow rules only | Allow/Deny rules |
+
+---
+
+# 24. Elastic IP
+
+Static public IP address.
+
+Normal public IP:
+
+```
+Instance Stop
+
+↓
+
+IP Changes
+```
+
+Elastic IP:
+
+```
+Instance Stop
+
+↓
+
+Same IP
+```
+
+---
+
+# 25. Elastic Load Balancer
+
+Distributes traffic.
+
+Types:
+
+## Application Load Balancer (ALB)
+
+Layer 7.
+
+Used for:
+
+* HTTP
+* HTTPS
+* Path routing
+
+Example:
+
+```
+/api
+
+↓
+
+Backend
+
+
+/images
+
+↓
+
+Storage
+```
+
+---
+
+## Network Load Balancer (NLB)
+
+Layer 4.
+
+Used for:
+
+* TCP
+* UDP
+* High performance
+
+---
+
+# 26. Auto Scaling Group
+
+Automatically manages EC2 count.
+
+Example:
+
+Normal:
+
+```
+2 Servers
+```
+
+High traffic:
+
+```
+10 Servers
+```
+
+Low traffic:
+
+```
+2 Servers
+```
+
+---
+
+# 27. Storage Services
+
+## Amazon S3
+
+Object storage.
+
+Used for:
+
+* Files
+* Backups
+* Static websites
+
+---
+
+## Amazon EBS
+
+Block storage.
+
+Used with:
+
+* EC2
+* Kubernetes Persistent Volumes
+
+---
+
+## Amazon EFS
+
+Shared file storage.
+
+Multiple servers can access the same files.
+
+---
+
+# 28. CloudWatch
+
+Monitoring service.
+
+Collects:
+
+* Metrics
+* Logs
+* Events
+* Alerts
+
+Example:
+
+```
+EC2 CPU > 80%
+
+↓
+
+CloudWatch Alarm
+
+↓
+
+Notification
+```
+
+---
+
+# AWS Architecture Before EKS
+
+A typical EKS environment:
+
+```
+AWS Account
+
+↓
+
+VPC
+
+↓
+
+Private Subnets
+
+↓
+
+EC2 Worker Nodes
+
+↓
+
+Kubernetes Pods
+
+↓
+
+Applications
+```
+
+---
+
+# Chapter Summary
+
+You learned:
+
+✅ IAM
+✅ Users, Groups, Roles
+✅ Policies
+✅ EC2
+✅ AMI
+✅ Instance Types
+✅ VPC
+✅ Subnets
+✅ Route Tables
+✅ Internet Gateway
+✅ NAT Gateway
+✅ Security Groups
+✅ Load Balancers
+✅ Auto Scaling
+✅ Storage
+✅ CloudWatch
+
+---
+
+# Hands-on Lab
+
+Before moving to EKS:
+
+1. Create a VPC.
+2. Create:
+
+   * Two public subnets
+   * Two private subnets
+3. Create an EC2 instance.
+4. Attach a security group.
+5. Connect using SSH.
+6. Install Docker.
+7. Understand networking.
+
+---
+
+## Next Chapter
+
+**Chapter 3 – Linux Fundamentals for EKS**
+
+Topics:
+
+* Linux file system
+* Users and permissions
+* Processes
+* System services
+* Networking commands
+* Package management
+* Shell scripting basics
+* Docker prerequisites
+
+(Continue with Chapter 3 when ready.)
