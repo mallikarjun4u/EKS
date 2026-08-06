@@ -14,7 +14,7 @@ CHAPTER 1
 * Disaster Recovery
 * AWS Global Infrastructure
 * Shared Responsibility Mode
-
+  </br>
 Characteristics of Cloud Computing
 
 * On-demand self-service
@@ -23,15 +23,15 @@ Characteristics of Cloud Computing
 * Rapid elasticity
 * Measured service (pay-as-you-go)
 
-* IAAS PAAS SAAS
+ IAAS PAAS SAAS
 
 * Containers are generally:
 
- * Faster to start
- * Smaller in size
- * More resource-efficient
+  Faster to start
+  Smaller in size
+  More resource-efficient
  This is why Kubernetes and Amazon EKS use containers.
-Region--AZ-datacenters
+   Region--AZ-datacenters
 
 Vertical scaling \
 Horizontal scaling
