@@ -46,7 +46,24 @@ Common strategies:
 
   CHAPTER 2
   AWS Cloud
+ IAM Roles  Temporary permissions.
 
+Mostly used by:
+* AWS services
+* Applications
+* Kubernetes Pods
+. IAM Policies
+
+Policies define permissions. Example:
+Allow EC2 start:
+```json
+{
+ "Effect": "Allow",
+ "Action": "ec2:StartInstances",
+ "Resource": "*"
+}
+
+Types 
 ├── Compute
 │     ├── EC2
 │     ├── Lambda
@@ -93,7 +110,7 @@ Conditional Permissions
 
 @@@@@@@@@@@@@@@
 LEARN CLI COMMANDS
-
+Types ec2
 General Purpose
 
 Compute Optimized
@@ -104,6 +121,25 @@ Storage Optimized
 
 Accelerated Computing, on demand, spot, reserved
 
+This diagram outlines the core components required to launch and run a virtual server instance (such as an AWS EC2 instance).
+
+
+### How They Connect at Launch
+
+```
+[ AMI ] -------------> Defines OS & Applications
+                            │
+                            ▼
+[ Instance Type ] ---> Allocates CPU & RAM resources
+                            │
+                            ▼
+     ┌──────────────────────┼──────────────────────┐
+     │                      │                      │
+     ▼                      ▼                      ▼
+[ Storage ]         [ Network Interface ]   [ Security Group ]
+(EBS Disks)         (Private IP / Subnet)   (Firewall Rules)
+
+```
 VPC
 
 ├── CIDR Block
